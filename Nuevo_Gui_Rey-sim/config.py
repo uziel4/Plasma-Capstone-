@@ -4,15 +4,26 @@ WINDOW_WIDTH = 1600
 WINDOW_HEIGHT = 950
 
 COLORS = {
-    "background": "#02091d",
-    "panel": "#031027",
-    "button": "#123f8f",
-    "button_light": "#1e5db8",
-    "white": "#f5f5f5",
-    "input": "#dcecff",
-    "black": "#020202",
-    "red": "#ff1b1b",
-    "green": "#37d03b",
-    "gray": "#cfd3da",
-    "grid": "#263550",
+    "background": "#050814",
+    "panel": "#0b1220",
+    "panel_light": "#111827",
+    "panel_soft": "#162033",
+
+    "button": "#1d4ed8",
+    "button_hover": "#2563eb",
+    "button_active": "#dc2626",
+
+    "white": "#f8fafc",
+    "muted": "#94a3b8",
+    "input": "#e0f2fe",
+    "black": "#020617",
+
+    "red": "#ef4444",
+    "green": "#22c55e",
+    "yellow": "#facc15",
+    "gray": "#64748b",
+
+    "grid": "#334155",
+    "graph_line": "#38bdf8",
+    "graph_marker": "#facc15",
 }

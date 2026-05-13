@@ -35,38 +35,39 @@ class ReactorSimulation:
 
         if hold:
             if roughing or turbo:
-                factor = 0.985
+                factor = 0.972
 
                 if turbo:
-                    factor = 0.965
+                    factor = 0.945
 
-                noise = random.uniform(0.995, 1.005)
+                noise = random.uniform(0.992, 1.008)
 
                 self.chamber_torr = max(
-                    target_torr * 0.85,
+                    target_torr * 0.82,
                     self.chamber_torr * factor * noise
                 )
 
-                self.roughing_torr = self.chamber_torr * random.uniform(0.98, 1.03)
+                self.roughing_torr = self.chamber_torr * random.uniform(0.97, 1.03)
 
             else:
+                drift = random.uniform(0.998, 1.006)
+
                 self.chamber_torr = min(
                     self.initial_chamber_torr,
-                    self.chamber_torr * random.uniform(1.005, 1.015)
+                    max(target_torr * 0.92, self.chamber_torr * drift)
                 )
 
-                if self.chamber_torr < target_torr:
-                    self.chamber_torr = target_torr * random.uniform(0.98, 1.03)
-
-                self.roughing_torr = self.chamber_torr * random.uniform(0.98, 1.03)
+                self.roughing_torr = self.chamber_torr * random.uniform(0.97, 1.03)
 
         elif roughing or turbo:
-            factor = 0.965
+            factor = 0.948
 
-            if turbo:
-                factor = 0.925
+            if roughing and turbo:
+                factor = 0.895
+            elif turbo:
+                factor = 0.915
 
-            noise = random.uniform(0.985, 1.015)
+            noise = random.uniform(0.975, 1.012)
 
             self.chamber_torr = max(
                 1e-6,
@@ -75,23 +76,23 @@ class ReactorSimulation:
 
             self.roughing_torr = max(
                 1e-6,
-                self.roughing_torr * 0.960 * noise
+                self.roughing_torr * 0.935 * noise
             )
 
         else:
             self.chamber_torr = min(
                 self.initial_chamber_torr,
-                self.chamber_torr * random.uniform(1.000, 1.001)
+                self.chamber_torr * random.uniform(1.000, 1.002)
             )
 
             self.roughing_torr = min(
                 self.initial_roughing_torr,
-                self.roughing_torr * random.uniform(1.000, 1.001)
+                self.roughing_torr * random.uniform(1.000, 1.002)
             )
 
-        self.temperature = 21.5 + random.uniform(-0.1, 0.1)
-        self.pressure_mbar = 1008.0 + random.uniform(-1.0, 1.0)
-        self.humidity = 45.0 + random.uniform(-1.0, 1.0)
+        self.temperature = 21.5 + random.uniform(-0.15, 0.15)
+        self.pressure_mbar = 1008.0 + random.uniform(-1.2, 1.2)
+        self.humidity = 45.0 + random.uniform(-1.2, 1.2)
 
     def target_progress_percent(self, target_mtorr):
         target_torr = self.parse_target_mtorr(target_mtorr)

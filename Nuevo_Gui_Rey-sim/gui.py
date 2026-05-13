@@ -34,29 +34,29 @@ class PlasmaReactorGUI:
         self.hv_start_time = None
         self.hv_total_seconds = 30
 
-        self.graph_time = 0
+        self.graph_time = 0.0
         self.x_data = []
         self.y_data = []
 
         self.build_ui()
         self.update_loop()
 
-    def panel(self, parent, bg=None, border=None, thickness=2):
+    def panel(self, parent, bg=None, border=None, thickness=1):
         return tk.Frame(
             parent,
             bg=bg or self.colors["panel"],
-            highlightbackground=border or self.colors["white"],
-            highlightcolor=border or self.colors["white"],
+            highlightbackground=border or self.colors["grid"],
+            highlightcolor=border or self.colors["grid"],
             highlightthickness=thickness,
             bd=0
         )
 
-    def label(self, parent, text, size=18, bg=None, weight="bold"):
+    def label(self, parent, text, size=18, bg=None, weight="bold", color=None):
         return tk.Label(
             parent,
             text=text,
             bg=bg or self.colors["panel"],
-            fg=self.colors["white"],
+            fg=color or self.colors["white"],
             font=("Arial", size, weight)
         )
 
@@ -69,8 +69,8 @@ class PlasmaReactorGUI:
             font=("Arial", size, "bold"),
             relief="flat",
             bd=0,
-            padx=8,
-            pady=8
+            padx=10,
+            pady=10
         )
 
     def entry_box(self, parent, variable, size=22):
@@ -86,13 +86,13 @@ class PlasmaReactorGUI:
             bd=0
         )
 
-    def action_button(self, parent, text, command, size=24):
+    def action_button(self, parent, text, command, size=22):
         frame = tk.Frame(
             parent,
             bg=self.colors["button"],
-            highlightbackground=self.colors["white"],
-            highlightcolor=self.colors["white"],
-            highlightthickness=3,
+            highlightbackground=self.colors["grid"],
+            highlightcolor=self.colors["grid"],
+            highlightthickness=1,
             bd=0,
             cursor="hand2"
         )
@@ -104,7 +104,7 @@ class PlasmaReactorGUI:
             fg=self.colors["white"],
             font=("Arial", size, "bold"),
             padx=28,
-            pady=8,
+            pady=11,
             cursor="hand2"
         )
 
@@ -114,23 +114,42 @@ class PlasmaReactorGUI:
         def click(event=None):
             command()
 
+        def enter(event=None):
+            if frame.cget("bg") != self.colors["button_active"]:
+                frame.config(bg=self.colors["button_hover"])
+                label.config(bg=self.colors["button_hover"])
+
+        def leave(event=None):
+            if frame.cget("bg") != self.colors["button_active"]:
+                frame.config(bg=self.colors["button"])
+                label.config(bg=self.colors["button"])
+
         frame.bind("<Button-1>", click)
         label.bind("<Button-1>", click)
+        frame.bind("<Enter>", enter)
+        label.bind("<Enter>", enter)
+        frame.bind("<Leave>", leave)
+        label.bind("<Leave>", leave)
 
         return frame
 
     def set_button_active(self, button, active):
+        bg = self.colors["button_active"] if active else self.colors["button"]
+
         button.config(
-            highlightbackground=self.colors["red"] if active else self.colors["white"],
-            highlightcolor=self.colors["red"] if active else self.colors["white"]
+            bg=bg,
+            highlightbackground=self.colors["red"] if active else self.colors["grid"],
+            highlightcolor=self.colors["red"] if active else self.colors["grid"]
         )
+
+        button.label.config(bg=bg)
 
     def build_ui(self):
         self.main = self.panel(
             self.root,
             bg=self.colors["background"],
-            border=self.colors["white"],
-            thickness=2
+            border=self.colors["grid"],
+            thickness=1
         )
         self.main.pack(fill="both", expand=True, padx=14, pady=14)
 
@@ -145,10 +164,10 @@ class PlasmaReactorGUI:
 
         title = tk.Label(
             self.main,
-            text="PUPR PLASMA MOBILE REACTOR VACUUM CONTROLLER VER. 2.0",
+            text=APP_TITLE,
             bg=self.colors["background"],
             fg=self.colors["white"],
-            font=("Arial", 28, "bold")
+            font=("Arial", 27, "bold")
         )
         title.grid(row=0, column=0, columnspan=3, sticky="ew", pady=(10, 18))
 
@@ -160,7 +179,7 @@ class PlasmaReactorGUI:
         self.build_environment_panel()
 
     def build_auto_panel(self):
-        panel = self.panel(self.main, thickness=3)
+        panel = self.panel(self.main, thickness=1)
         panel.grid(row=1, column=0, sticky="nsew", padx=16, pady=8)
 
         self.label(panel, "AUTO", 28).pack(pady=(10, 10))
@@ -168,31 +187,16 @@ class PlasmaReactorGUI:
         button_frame = tk.Frame(panel, bg=self.colors["panel"])
         button_frame.pack(fill="x", padx=18)
 
-        self.auto_start_btn = self.action_button(
-            button_frame,
-            "START",
-            self.start_auto,
-            size=22
-        )
+        self.auto_start_btn = self.action_button(button_frame, "START", self.start_auto, size=21)
         self.auto_start_btn.pack(side="left", expand=True, fill="x", padx=6)
 
-        self.auto_stop_btn = self.action_button(
-            button_frame,
-            "STOP",
-            self.stop_auto,
-            size=22
-        )
+        self.auto_stop_btn = self.action_button(button_frame, "STOP", self.stop_auto, size=21)
         self.auto_stop_btn.pack(side="left", expand=True, fill="x", padx=6)
 
-        self.reset_btn = self.action_button(
-            panel,
-            "RESET",
-            self.reset_system,
-            size=20
-        )
+        self.reset_btn = self.action_button(panel, "RESET", self.reset_system, size=20)
         self.reset_btn.pack(fill="x", padx=24, pady=(14, 10))
 
-        self.label(panel, "TARGET VACUUM (mTorr)", 18).pack(pady=(8, 4))
+        self.label(panel, "TARGET VACUUM (mTorr)", 17, color=self.colors["muted"]).pack(pady=(8, 4))
 
         self.target_vacuum_var = tk.StringVar(value="1.000")
 
@@ -218,20 +222,20 @@ class PlasmaReactorGUI:
             pady=(10, 6)
         )
 
-        tk.Frame(panel, bg=self.colors["white"], height=1).grid(
+        tk.Frame(panel, bg=self.colors["grid"], height=1).grid(
             row=1,
             column=0,
             columnspan=2,
             sticky="ew"
         )
 
-        self.label(panel, "PRESSURE GAUGE VOLTAGE (V)", 16).grid(
+        self.label(panel, "PRESSURE GAUGE VOLTAGE (V)", 15, color=self.colors["muted"]).grid(
             row=2,
             column=0,
             pady=(8, 4)
         )
 
-        self.label(panel, "TIMER (HH:MM:SS)", 18).grid(
+        self.label(panel, "TIMER (HH:MM:SS)", 17, color=self.colors["muted"]).grid(
             row=2,
             column=1,
             pady=(8, 4)
@@ -262,20 +266,10 @@ class PlasmaReactorGUI:
         button_frame.grid_columnconfigure(0, weight=1)
         button_frame.grid_columnconfigure(1, weight=1)
 
-        self.hv_start_btn = self.action_button(
-            button_frame,
-            "START",
-            self.start_hv,
-            size=24
-        )
+        self.hv_start_btn = self.action_button(button_frame, "START", self.start_hv, size=23)
         self.hv_start_btn.grid(row=0, column=0, padx=100, sticky="ew")
 
-        self.hv_stop_btn = self.action_button(
-            button_frame,
-            "STOP",
-            self.stop_hv,
-            size=24
-        )
+        self.hv_stop_btn = self.action_button(button_frame, "STOP", self.stop_hv, size=23)
         self.hv_stop_btn.grid(row=0, column=1, padx=100, sticky="ew")
 
     def build_manual_panel(self):
@@ -284,7 +278,7 @@ class PlasmaReactorGUI:
 
         title = tk.Label(
             panel,
-            text="MANUAL  CONTROL",
+            text="MANUAL CONTROL",
             bg=self.colors["background"],
             fg=self.colors["white"],
             font=("Arial", 25, "bold"),
@@ -292,34 +286,17 @@ class PlasmaReactorGUI:
         )
         title.pack(fill="x", pady=(0, 24))
 
-        self.roughing_btn = self.manual_button(
-            panel,
-            "⚙",
-            "Roughing\nPump",
-            self.toggle_roughing
-        )
-
-        self.turbo_btn = self.manual_button(
-            panel,
-            "◉",
-            "Turbomolecular\nPump",
-            self.toggle_turbo
-        )
-
-        self.mass_flow_btn = self.manual_button(
-            panel,
-            "≋",
-            "Mass Flow",
-            self.toggle_mass_flow
-        )
+        self.roughing_btn = self.manual_button(panel, "⚙", "Roughing\nPump", self.toggle_roughing)
+        self.turbo_btn = self.manual_button(panel, "◉", "Turbomolecular\nPump", self.toggle_turbo)
+        self.mass_flow_btn = self.manual_button(panel, "≋", "Mass Flow", self.toggle_mass_flow)
 
     def manual_button(self, parent, icon, text, command):
         frame = tk.Frame(
             parent,
-            bg=self.colors["button"],
-            highlightbackground=self.colors["white"],
-            highlightcolor=self.colors["white"],
-            highlightthickness=2,
+            bg=self.colors["panel_light"],
+            highlightbackground=self.colors["grid"],
+            highlightcolor=self.colors["grid"],
+            highlightthickness=1,
             bd=0,
             cursor="hand2"
         )
@@ -332,8 +309,8 @@ class PlasmaReactorGUI:
         icon_label = tk.Label(
             frame,
             text=icon,
-            bg=self.colors["button"],
-            fg=self.colors["white"],
+            bg=self.colors["panel_light"],
+            fg=self.colors["graph_line"],
             font=("Arial", 42, "bold"),
             width=4
         )
@@ -342,7 +319,7 @@ class PlasmaReactorGUI:
         text_label = tk.Label(
             frame,
             text=text,
-            bg=self.colors["button"],
+            bg=self.colors["panel_light"],
             fg=self.colors["white"],
             font=("Arial", 21, "bold"),
             justify="center"
@@ -353,7 +330,7 @@ class PlasmaReactorGUI:
             frame,
             width=50,
             height=50,
-            bg=self.colors["button"],
+            bg=self.colors["panel_light"],
             highlightthickness=0
         )
         status.grid(row=0, column=2, padx=(6, 26))
@@ -364,20 +341,20 @@ class PlasmaReactorGUI:
             42,
             42,
             fill=self.colors["gray"],
-            outline="#202020",
+            outline=self.colors["background"],
             width=3
         )
 
         frame.status = status
         frame.light = light
+        frame.icon_label = icon_label
+        frame.text_label = text_label
 
         def click(event=None):
             command()
 
-        frame.bind("<Button-1>", click)
-        icon_label.bind("<Button-1>", click)
-        text_label.bind("<Button-1>", click)
-        status.bind("<Button-1>", click)
+        for widget in [frame, icon_label, text_label, status]:
+            widget.bind("<Button-1>", click)
 
         return frame
 
@@ -398,22 +375,22 @@ class PlasmaReactorGUI:
         )
 
         self.chamber_var = tk.StringVar(value="1.450 × 10⁻¹ Torr")
-        self.window_var = tk.StringVar(value="30s")
+        self.window_var = tk.StringVar(value="LIVE 60s")
 
         tk.Label(
             panel,
             textvariable=self.chamber_var,
-            bg=self.colors["panel"],
+            bg=self.colors["panel_light"],
             fg=self.colors["white"],
             font=("Arial", 18, "bold"),
-            highlightbackground=self.colors["white"],
-            highlightcolor=self.colors["white"],
-            highlightthickness=2,
+            highlightbackground=self.colors["grid"],
+            highlightcolor=self.colors["grid"],
+            highlightthickness=1,
             padx=6,
             pady=12
         ).grid(row=1, column=0, sticky="ew", padx=(14, 6), pady=4)
 
-        self.readout(panel, self.window_var, size=19).grid(
+        self.readout(panel, self.window_var, size=18).grid(
             row=1,
             column=1,
             sticky="ew",
@@ -434,21 +411,20 @@ class PlasmaReactorGUI:
 
         self.ax.set_facecolor(self.colors["background"])
         self.ax.set_yscale("log")
-        self.ax.set_xlim(0, 30)
-        self.ax.set_ylim(1e-6, 1e0)
+        self.ax.set_xlim(0, 60)
+        self.ax.set_ylim(1e-6, 2e-1)
 
-        self.ax.grid(True, color=self.colors["grid"], linewidth=0.8)
-        self.ax.tick_params(colors=self.colors["white"], labelsize=12)
+        self.ax.grid(True, color=self.colors["grid"], linewidth=0.8, alpha=0.85)
+        self.ax.tick_params(colors=self.colors["white"], labelsize=11)
 
         for spine in self.ax.spines.values():
             spine.set_color(self.colors["grid"])
 
-        self.ax.set_xticks([0, 10, 20, 30])
-        self.ax.set_xticklabels(["0s", "10s", "20s", "30s"])
+        self.ax.set_xticks([0, 15, 30, 45, 60])
+        self.ax.set_xticklabels(["0s", "15s", "30s", "45s", "60s"])
 
-        self.ax.set_yticks([1e0, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6])
+        self.ax.set_yticks([1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6])
         self.ax.set_yticklabels([
-            "1×10⁰",
             "1×10⁻¹",
             "1×10⁻²",
             "1×10⁻³",
@@ -457,9 +433,21 @@ class PlasmaReactorGUI:
             "1×10⁻⁶"
         ])
 
-        self.line, = self.ax.plot([], [], color=self.colors["white"], linewidth=3)
+        self.ax.set_xlabel("Time", color=self.colors["muted"], fontsize=11)
+        self.ax.set_ylabel("Pressure (Torr)", color=self.colors["muted"], fontsize=11)
 
-        self.fig.tight_layout(pad=1.1)
+        self.line, = self.ax.plot(
+            [],
+            [],
+            color=self.colors["graph_line"],
+            linewidth=2.8,
+            marker="o",
+            markersize=3.5,
+            markerfacecolor=self.colors["graph_marker"],
+            markeredgewidth=0
+        )
+
+        self.fig.tight_layout(pad=1.4)
 
         self.canvas = FigureCanvasTkAgg(self.fig, master=parent)
         self.canvas_widget = self.canvas.get_tk_widget()
@@ -499,11 +487,11 @@ class PlasmaReactorGUI:
         style.theme_use("default")
         style.configure(
             "Vacuum.Horizontal.TProgressbar",
-            background=self.colors["white"],
+            background=self.colors["graph_line"],
             troughcolor=self.colors["background"],
-            bordercolor=self.colors["white"],
-            lightcolor=self.colors["white"],
-            darkcolor=self.colors["white"]
+            bordercolor=self.colors["grid"],
+            lightcolor=self.colors["graph_line"],
+            darkcolor=self.colors["graph_line"]
         )
 
         self.bar = ttk.Progressbar(
@@ -520,11 +508,11 @@ class PlasmaReactorGUI:
         bar_label = tk.Label(
             panel,
             textvariable=self.bar_text_var,
-            bg=self.colors["panel"],
+            bg=self.colors["panel_light"],
             fg=self.colors["white"],
             font=("Arial", 23, "bold"),
-            highlightbackground=self.colors["white"],
-            highlightthickness=2,
+            highlightbackground=self.colors["grid"],
+            highlightthickness=1,
             pady=10
         )
         bar_label.grid(row=3, column=0, sticky="ew", padx=14, pady=(0, 14))
@@ -554,7 +542,7 @@ class PlasmaReactorGUI:
             pady=(12, 6)
         )
 
-        tk.Frame(panel, bg=self.colors["white"], height=1).grid(row=1, column=0, sticky="ew")
+        tk.Frame(panel, bg=self.colors["grid"], height=1).grid(row=1, column=0, sticky="ew")
 
         self.env_var = tk.StringVar()
 
@@ -612,7 +600,7 @@ class PlasmaReactorGUI:
 
         self.sim.reset()
 
-        self.graph_time = 0
+        self.graph_time = 0.0
         self.x_data.clear()
         self.y_data.clear()
 
@@ -662,10 +650,17 @@ class PlasmaReactorGUI:
         self.set_manual_state(self.mass_flow_btn, self.mass_flow_active)
 
     def set_manual_state(self, frame, active):
+        bg = self.colors["button_active"] if active else self.colors["panel_light"]
+
         frame.config(
-            highlightbackground=self.colors["red"] if active else self.colors["white"],
-            highlightcolor=self.colors["red"] if active else self.colors["white"]
+            bg=bg,
+            highlightbackground=self.colors["red"] if active else self.colors["grid"],
+            highlightcolor=self.colors["red"] if active else self.colors["grid"]
         )
+
+        frame.icon_label.config(bg=bg)
+        frame.text_label.config(bg=bg)
+        frame.status.config(bg=bg)
 
         frame.status.itemconfig(
             frame.light,
@@ -777,7 +772,7 @@ class PlasmaReactorGUI:
             self.bar_text_var.set(f"{progress:0.0f}% TO TARGET")
 
         self.env_var.set(
-            f"TEMPERATURE  : {self.sim.temperature:0.1f}C\n"
+            f"TEMPERATURE  : {self.sim.temperature:0.1f} C\n"
             f"PRESSURE        : {self.sim.pressure_mbar:0.0f} mbar\n"
             f"TORR            : {self.sim.torr_from_mbar():0.3f} Torr\n"
             f"HUMIDITY        : {self.sim.humidity:0.0f}%"
@@ -786,7 +781,7 @@ class PlasmaReactorGUI:
         self.update_hv_timer()
         self.update_graph()
 
-        self.root.after(1000, self.update_loop)
+        self.root.after(250, self.update_loop)
 
     def update_hv_timer(self):
         if self.hv_active and self.hv_start_time is not None:
@@ -799,21 +794,33 @@ class PlasmaReactorGUI:
                 self.stop_hv()
 
     def update_graph(self):
-        self.graph_time += 1
+        self.graph_time += 0.25
 
         self.x_data.append(self.graph_time)
         self.y_data.append(max(self.sim.chamber_torr, 1e-6))
 
-        if len(self.x_data) > 31:
-            self.x_data = self.x_data[-31:]
-            self.y_data = self.y_data[-31:]
+        max_points = 240
 
-        xmin = max(0, self.graph_time - 30)
+        if len(self.x_data) > max_points:
+            self.x_data = self.x_data[-max_points:]
+            self.y_data = self.y_data[-max_points:]
+
+        xmin = max(0, self.graph_time - 60)
         display_x = [x - xmin for x in self.x_data]
 
         self.line.set_data(display_x, self.y_data)
 
-        self.ax.set_xlim(0, 30)
-        self.ax.set_ylim(1e-6, 1e0)
+        self.ax.set_xlim(0, 60)
+
+        current_min = min(self.y_data)
+        current_max = max(self.y_data)
+
+        y_low = max(1e-6, current_min * 0.55)
+        y_high = min(2e-1, current_max * 1.45)
+
+        if y_high <= y_low:
+            y_high = y_low * 10
+
+        self.ax.set_ylim(y_low, y_high)
 
         self.canvas.draw_idle()
