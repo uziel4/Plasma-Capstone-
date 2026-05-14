@@ -173,6 +173,7 @@ class PlasmaReactorGUI:
 
         self.build_auto_panel()
         self.build_hv_panel()
+        self.build_timer_panel()
         self.build_manual_panel()
         self.build_chamber_panel()
         self.build_roughing_panel()
@@ -209,68 +210,59 @@ class PlasmaReactorGUI:
 
     def build_hv_panel(self):
         panel = self.panel(self.main)
-        panel.grid(row=1, column=1, columnspan=2, sticky="nsew", padx=12, pady=8)
+        panel.grid(row=1, column=1, sticky="nsew", padx=12, pady=8)
 
-        panel.grid_columnconfigure(0, weight=1)
-        panel.grid_columnconfigure(1, weight=1)
-
-        self.label(panel, "HIGH VOLTAGE SOURCE", 20).grid(
-            row=0,
-            column=0,
-            columnspan=2,
-            sticky="ew",
-            pady=(10, 6)
+        self.label(panel, "HIGH VOLTAGE SOURCE", 20).pack(
+            fill="x",
+            pady=(10, 10)
         )
 
-        tk.Frame(panel, bg=self.colors["grid"], height=1).grid(
-            row=1,
-            column=0,
-            columnspan=2,
-            sticky="ew"
-        )
-
-        self.label(panel, "PRESSURE GAUGE VOLTAGE (V)", 15, color=self.colors["muted"]).grid(
-            row=2,
-            column=0,
-            pady=(8, 4)
-        )
-
-        self.label(panel, "TIMER (HH:MM:SS)", 17, color=self.colors["muted"]).grid(
-            row=2,
-            column=1,
+        self.label(panel, "PRESSURE GAUGE VOLTAGE (V)", 15, color=self.colors["muted"]).pack(
             pady=(8, 4)
         )
 
         self.pressure_voltage_var = tk.StringVar(value="0.00")
-        self.timer_var = tk.StringVar(value="00:00:30")
 
-        self.readout(panel, self.pressure_voltage_var, size=25).grid(
-            row=3,
-            column=0,
-            sticky="ew",
-            padx=(12, 6),
+        self.readout(panel, self.pressure_voltage_var, size=25).pack(
+            fill="x",
+            padx=14,
+            pady=(0, 18),
             ipady=10
         )
 
-        self.entry_box(panel, self.timer_var, size=25).grid(
-            row=3,
-            column=1,
-            sticky="ew",
-            padx=(6, 12),
+    def build_timer_panel(self):
+        panel = self.panel(self.main)
+        panel.grid(row=1, column=2, sticky="nsew", padx=12, pady=8)
+
+        self.label(panel, "HIGH VOLTAGE TIMER", 20).pack(
+            fill="x",
+            pady=(10, 10)
+        )
+
+        self.label(panel, "TIMER (HH:MM:SS)", 15, color=self.colors["muted"]).pack(
+            pady=(8, 4)
+        )
+
+        self.timer_var = tk.StringVar(value="00:00:30")
+
+        self.entry_box(panel, self.timer_var, size=25).pack(
+            fill="x",
+            padx=14,
+            pady=(0, 14),
             ipady=10
         )
 
         button_frame = tk.Frame(panel, bg=self.colors["panel"])
-        button_frame.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(14, 14))
+        button_frame.pack(fill="x", padx=14, pady=(0, 14))
 
         button_frame.grid_columnconfigure(0, weight=1)
         button_frame.grid_columnconfigure(1, weight=1)
 
-        self.hv_start_btn = self.action_button(button_frame, "START", self.start_hv, size=23)
-        self.hv_start_btn.grid(row=0, column=0, padx=100, sticky="ew")
+        self.hv_toggle_btn = self.action_button(button_frame, "START", self.toggle_hv, size=21)
+        self.hv_toggle_btn.grid(row=0, column=0, padx=6, sticky="ew")
 
-        self.hv_stop_btn = self.action_button(button_frame, "STOP", self.stop_hv, size=23)
-        self.hv_stop_btn.grid(row=0, column=1, padx=100, sticky="ew")
+        self.hv_reset_btn = self.action_button(button_frame, "RESET", self.reset_hv_timer, size=21)
+        self.hv_reset_btn.grid(row=0, column=1, padx=6, sticky="ew")
 
     def build_manual_panel(self):
         panel = tk.Frame(self.main, bg=self.colors["background"])
@@ -614,7 +606,8 @@ class PlasmaReactorGUI:
         self.status_var.set("SYSTEM RESET")
 
         self.set_button_active(self.auto_start_btn, False)
-        self.set_button_active(self.hv_start_btn, False)
+        self.set_button_active(self.hv_toggle_btn, False)
+        self.hv_toggle_btn.label.config(text="START")
 
         self.update_manual_indicators()
 
@@ -623,18 +616,29 @@ class PlasmaReactorGUI:
         self.hv_start_time = time.time()
         self.hv_total_seconds = self.parse_time(self.timer_var.get())
 
-        self.set_button_active(self.hv_start_btn, True)
+        self.set_button_active(self.hv_toggle_btn, True)
+        self.hv_toggle_btn.label.config(text="STOP")
 
     def stop_hv(self):
         self.hv_active = False
 
-        self.set_button_active(self.hv_start_btn, False)
-        self.set_button_active(self.hv_stop_btn, True)
+        self.set_button_active(self.hv_toggle_btn, False)
+        self.hv_toggle_btn.label.config(text="START")
 
-        self.root.after(
-            250,
-            lambda: self.set_button_active(self.hv_stop_btn, False)
-        )
+    def toggle_hv(self):
+        if self.hv_active:
+            self.stop_hv()
+        else:
+            self.start_hv()
+
+    def reset_hv_timer(self):
+        self.hv_active = False
+        self.hv_start_time = None
+        self.hv_total_seconds = 30
+
+        self.timer_var.set("00:00:30")
+        self.set_button_active(self.hv_toggle_btn, False)
+        self.hv_toggle_btn.label.config(text="START")
 
     def toggle_roughing(self):
         self.roughing_active = not self.roughing_active
