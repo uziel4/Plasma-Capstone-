@@ -523,7 +523,7 @@ class PlasmaReactorGUI:
             panel,
             textvariable=self.status_var,
             bg=self.colors["panel"],
-            fg=self.colors["green"],
+            fg=self.colors["white"],
             font=("Arial", 16, "bold"),
             pady=8
         )
@@ -561,8 +561,12 @@ class PlasmaReactorGUI:
         self.hold_mode = False
 
         self.roughing_active = True
-        self.turbo_active = True
         self.mass_flow_active = False
+
+        # Turbo only starts if target is 0.100 mTorr (1×10⁻⁴ Torr) or lower
+        target_value = self.target_vacuum_var.get()
+        target_torr = self.sim.parse_target_mtorr(target_value)
+        self.turbo_active = target_torr <= 1e-4
 
         self.status_var.set("AUTO PUMPDOWN ACTIVE")
 
@@ -719,36 +723,35 @@ class PlasmaReactorGUI:
 
                     self.roughing_active = False
                     self.turbo_active = False
-                    self.mass_flow_active = True
+                    self.mass_flow_active = False
 
                     self.status_var.set("TARGET REACHED - HOLD MODE")
+                else:
+                    # Roughing always active during pumpdown
+                    self.roughing_active = True
+                    
+                    # Turbo stays active if target requires it (≤0.100 mTorr)
+                    if target_torr <= 1e-4:
+                        self.turbo_active = True
+                        self.status_var.set("TURBO + ROUGHING ACTIVE - FINE VACUUM")
+                    else:
+                        self.turbo_active = False
+                        self.status_var.set("ROUGHING PUMP - PUMPDOWN ACTIVE")
 
             else:
-                upper_limit = target_torr * 1.15
-                high_limit = target_torr * 1.50
-                lower_limit = target_torr * 0.90
+                # Hold mode: maintain target vacuum
+                self.turbo_active = False  # Turbo off during hold mode
 
-                self.mass_flow_active = True
-
-                if current_torr > high_limit:
-                    self.roughing_active = True
-                    self.turbo_active = True
-                    self.status_var.set("VACUUM LOSS - TURBO ACTIVE")
-
-                elif current_torr > upper_limit:
-                    self.roughing_active = True
-                    self.turbo_active = False
-                    self.status_var.set("VACUUM CORRECTION ACTIVE")
-
-                elif current_torr <= lower_limit:
+                # Mass flow only activates if vacuum dropped below target (vacuum is better/lower)
+                if current_torr < target_torr:
+                    self.mass_flow_active = True
                     self.roughing_active = False
-                    self.turbo_active = False
-                    self.status_var.set("HOLDING TARGET VACUUM")
-
+                    self.status_var.set("MASS FLOW ACTIVE - REGULATING VACUUM")
                 else:
-                    self.roughing_active = False
-                    self.turbo_active = False
-                    self.status_var.set("HOLDING TARGET VACUUM")
+                    # Vacuum is worse than target, need to pump more
+                    self.mass_flow_active = False
+                    self.roughing_active = True
+                    self.status_var.set("VACUUM LOSS - ROUGHING ACTIVE")
 
             self.update_manual_indicators()
 

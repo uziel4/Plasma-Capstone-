@@ -25,5 +25,5 @@ COLORS = {
 
     "grid": "#334155",
     "graph_line": "#38bdf8",
-    "graph_marker": "#facc15",
+    "graph_marker": "#f8fafc",
 }
