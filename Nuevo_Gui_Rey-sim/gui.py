@@ -126,9 +126,9 @@ class PlasmaReactorGUI:
         )
         self.main.pack(fill="both", expand=True, padx=14, pady=14)
 
-        self.main.grid_columnconfigure(0, weight=0, minsize=470)
-        self.main.grid_columnconfigure(1, weight=1, minsize=520)
-        self.main.grid_columnconfigure(2, weight=1, minsize=520)
+        self.main.grid_columnconfigure(0, weight=0, minsize=400)
+        self.main.grid_columnconfigure(1, weight=1, minsize=470)
+        self.main.grid_columnconfigure(2, weight=1, minsize=470)
 
         self.main.grid_rowconfigure(0, weight=0)
         self.main.grid_rowconfigure(1, weight=0)
@@ -139,9 +139,17 @@ class PlasmaReactorGUI:
             self.main,
             text=APP_TITLE,
             text_color=self.colors["white"],
-            font=("Arial", 27, "bold")
+            font=("Arial", 24, "bold")
         )
         title.grid(row=0, column=0, columnspan=3, sticky="ew", pady=(10, 18))
+
+        self.right_stack = ctk.CTkFrame(
+            self.main,
+            fg_color=self.colors["background"],
+            corner_radius=0
+        )
+        self.right_stack.grid(row=2, column=2, rowspan=2, sticky="new", padx=12, pady=(8, 16))
+        self.right_stack.grid_columnconfigure(0, weight=1)
 
         self.build_auto_panel()
         self.build_hv_panel()
@@ -153,7 +161,7 @@ class PlasmaReactorGUI:
 
     def build_auto_panel(self):
         panel = self.panel(self.main, thickness=1)
-        panel.grid(row=1, column=0, sticky="nsew", padx=16, pady=8)
+        panel.grid(row=1, column=0, sticky="nsew", padx=12, pady=6)
 
         self.label(panel, "AUTO", 28).pack(pady=(10, 10))
 
@@ -182,7 +190,7 @@ class PlasmaReactorGUI:
 
     def build_hv_panel(self):
         panel = self.panel(self.main)
-        panel.grid(row=1, column=1, sticky="nsew", padx=12, pady=8)
+        panel.grid(row=1, column=1, sticky="nsew", padx=10, pady=6)
 
         self.label(panel, "HIGH VOLTAGE SOURCE", 20).pack(
             fill="x",
@@ -217,7 +225,7 @@ class PlasmaReactorGUI:
 
     def build_timer_panel(self):
         panel = self.panel(self.main)
-        panel.grid(row=1, column=2, sticky="nsew", padx=12, pady=8)
+        panel.grid(row=1, column=2, sticky="nsew", padx=10, pady=6)
 
         self.label(panel, "HIGH VOLTAGE TIMER", 20).pack(
             fill="x",
@@ -251,7 +259,7 @@ class PlasmaReactorGUI:
 
     def build_manual_panel(self):
         panel = ctk.CTkFrame(self.main, fg_color=self.colors["background"], corner_radius=0)
-        panel.grid(row=2, column=0, rowspan=2, sticky="nsew", padx=16, pady=(30, 16))
+        panel.grid(row=2, column=0, rowspan=2, sticky="nsew", padx=12, pady=(22, 14))
 
         title = ctk.CTkLabel(
             panel,
@@ -332,7 +340,7 @@ class PlasmaReactorGUI:
 
     def build_chamber_panel(self):
         panel = self.panel(self.main)
-        panel.grid(row=2, column=1, rowspan=2, sticky="nsew", padx=12, pady=(8, 16))
+        panel.grid(row=2, column=1, rowspan=2, sticky="nsew", padx=10, pady=(8, 14))
 
         panel.grid_columnconfigure(0, weight=1)
         panel.grid_columnconfigure(1, weight=1)
@@ -372,7 +380,7 @@ class PlasmaReactorGUI:
 
     def build_graph(self, parent):
         self.fig = Figure(
-            figsize=(5.4, 3.7),
+            figsize=(4.8, 3.25),
             dpi=100,
             facecolor=self.colors["panel"]
         )
@@ -426,13 +434,13 @@ class PlasmaReactorGUI:
             column=0,
             columnspan=2,
             sticky="nsew",
-            padx=16,
-            pady=(16, 18)
+            padx=14,
+            pady=(12, 14)
         )
 
     def build_roughing_panel(self):
-        panel = self.panel(self.main)
-        panel.grid(row=2, column=2, sticky="nsew", padx=12, pady=(8, 8))
+        panel = self.panel(self.right_stack)
+        panel.grid(row=0, column=0, sticky="ew", padx=0, pady=(0, 8))
 
         panel.grid_columnconfigure(0, weight=1)
 
@@ -440,17 +448,17 @@ class PlasmaReactorGUI:
             row=0,
             column=0,
             sticky="ew",
-            pady=(14, 12)
+            pady=(10, 6)
         )
 
         self.roughing_var = tk.StringVar(value="1.450 × 10⁻¹ Torr")
 
-        self.readout(panel, self.roughing_var, size=20).grid(
+        self.readout(panel, self.roughing_var, size=19).grid(
             row=1,
             column=0,
             sticky="ew",
             padx=14,
-            pady=(0, 12)
+            pady=(0, 8)
         )
 
         style = ttk.Style()
@@ -471,7 +479,7 @@ class PlasmaReactorGUI:
             maximum=100,
             style="Vacuum.Horizontal.TProgressbar"
         )
-        self.bar.grid(row=2, column=0, sticky="ew", padx=14, pady=(2, 8), ipady=16)
+        self.bar.grid(row=2, column=0, sticky="ew", padx=14, pady=(2, 5), ipady=8)
 
         self.bar_text_var = tk.StringVar(value="0% TO TARGET")
 
@@ -480,11 +488,11 @@ class PlasmaReactorGUI:
             textvariable=self.bar_text_var,
             fg_color=self.colors["panel_light"],
             text_color=self.colors["white"],
-            font=("Arial", 23, "bold"),
+            font=("Arial", 16, "bold"),
             corner_radius=8,
-            pady=10
+            pady=6
         )
-        bar_label.grid(row=3, column=0, sticky="ew", padx=14, pady=(0, 14))
+        bar_label.grid(row=3, column=0, sticky="ew", padx=14, pady=(0, 8))
 
         self.status_var = tk.StringVar(value="SYSTEM READY")
 
@@ -493,14 +501,16 @@ class PlasmaReactorGUI:
             textvariable=self.status_var,
             fg_color=self.colors["panel"],
             text_color=self.colors["white"],
-            font=("Arial", 16, "bold"),
-            pady=8
+            font=("Arial", 13, "bold"),
+            corner_radius=6,
+            padx=6,
+            pady=4
         )
-        status_label.grid(row=4, column=0, sticky="ew", padx=14, pady=(0, 14))
+        status_label.grid(row=4, column=0, sticky="ew", padx=60, pady=(0, 4))
 
     def build_environment_panel(self):
-        panel = self.panel(self.main)
-        panel.grid(row=3, column=2, sticky="nsew", padx=12, pady=(8, 16))
+        panel = self.panel(self.right_stack)
+        panel.grid(row=1, column=0, sticky="ew", padx=0, pady=(0, 0))
 
         panel.grid_columnconfigure(0, weight=1)
 
@@ -508,7 +518,7 @@ class PlasmaReactorGUI:
             row=0,
             column=0,
             sticky="ew",
-            pady=(12, 6)
+            pady=(6, 2)
         )
 
         ctk.CTkFrame(panel, fg_color=self.colors["grid"], height=1, corner_radius=0).grid(row=1, column=0, sticky="ew")
@@ -518,11 +528,15 @@ class PlasmaReactorGUI:
         ctk.CTkLabel(
             panel,
             textvariable=self.env_var,
-            fg_color=self.colors["panel"],
+            fg_color=self.colors["panel_light"],
             text_color=self.colors["white"],
-            font=("Arial", 17, "bold"),
-            justify="left"
-        ).grid(row=2, column=0, sticky="nsew", padx=24, pady=18)
+            font=("Arial", 14, "bold"),
+            justify="left",
+            anchor="center",
+            corner_radius=8,
+            padx=12,
+            pady=8
+        ).grid(row=2, column=0, sticky="ew", padx=14, pady=(4, 10))
 
     def start_auto(self):
         self.auto_active = True
