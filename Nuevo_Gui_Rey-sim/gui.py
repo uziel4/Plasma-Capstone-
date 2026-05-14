@@ -49,7 +49,7 @@ class PlasmaReactorGUI:
         return ctk.CTkFrame(
             parent,
             fg_color=bg or self.colors["panel"],
-            border_color=border or self.colors["grid"],
+            border_color=border or self.colors["white"],
             border_width=thickness,
             corner_radius=12
         )
@@ -80,7 +80,7 @@ class PlasmaReactorGUI:
             textvariable=variable,
             text_color=self.colors["black"],
             fg_color=self.colors["input"],
-            border_color=self.colors["grid"],
+            border_color=self.colors["white"],
             border_width=1,
             font=("Arial", size, "bold"),
             justify="center",
