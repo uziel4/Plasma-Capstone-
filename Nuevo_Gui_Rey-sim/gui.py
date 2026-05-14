@@ -217,18 +217,31 @@ class PlasmaReactorGUI:
             pady=(10, 10)
         )
 
-        self.label(panel, "PRESSURE GAUGE VOLTAGE (V)", 15, color=self.colors["muted"]).pack(
+        self.label(panel, "VOLTAGE (V)", 15, color=self.colors["muted"]).pack(
             pady=(8, 4)
         )
 
-        self.pressure_voltage_var = tk.StringVar(value="0.00")
+        self.hv_voltage_var = tk.StringVar(value="0.00")
+        self.hv_voltage_applied = False
 
-        self.readout(panel, self.pressure_voltage_var, size=25).pack(
+        self.entry_box(panel, self.hv_voltage_var, size=25).pack(
             fill="x",
             padx=14,
-            pady=(0, 18),
+            pady=(0, 14),
             ipady=10
         )
+
+        button_frame = tk.Frame(panel, bg=self.colors["panel"])
+        button_frame.pack(fill="x", padx=14, pady=(0, 14))
+
+        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(1, weight=1)
+
+        self.hv_apply_btn = self.action_button(button_frame, "APPLY", self.apply_hv_voltage, size=21)
+        self.hv_apply_btn.grid(row=0, column=0, padx=6, sticky="ew")
+
+        self.hv_voltage_reset_btn = self.action_button(button_frame, "RESET", self.reset_hv_voltage, size=21)
+        self.hv_voltage_reset_btn.grid(row=0, column=1, padx=6, sticky="ew")
 
     def build_timer_panel(self):
         panel = self.panel(self.main)
@@ -608,6 +621,10 @@ class PlasmaReactorGUI:
         self.set_button_active(self.auto_start_btn, False)
         self.set_button_active(self.hv_toggle_btn, False)
         self.hv_toggle_btn.label.config(text="START")
+        self.hv_voltage_var.set("0.00")
+        self.hv_voltage_applied = False
+        self.hv_apply_btn.label.config(text="APPLY")
+        self.set_button_active(self.hv_apply_btn, False)
 
         self.update_manual_indicators()
 
@@ -639,6 +656,22 @@ class PlasmaReactorGUI:
         self.timer_var.set("00:00:30")
         self.set_button_active(self.hv_toggle_btn, False)
         self.hv_toggle_btn.label.config(text="START")
+
+    def apply_hv_voltage(self):
+        try:
+            voltage = float(self.hv_voltage_var.get())
+            if voltage >= 0:
+                self.hv_voltage_applied = True
+                self.hv_apply_btn.label.config(text="APPLIED")
+                self.set_button_active(self.hv_apply_btn, True)
+        except ValueError:
+            pass
+
+    def reset_hv_voltage(self):
+        self.hv_voltage_var.set("0.00")
+        self.hv_voltage_applied = False
+        self.hv_apply_btn.label.config(text="APPLY")
+        self.set_button_active(self.hv_apply_btn, False)
 
     def toggle_roughing(self):
         self.roughing_active = not self.roughing_active
@@ -768,7 +801,6 @@ class PlasmaReactorGUI:
 
         self.chamber_var.set(self.format_pressure(self.sim.chamber_torr))
         self.roughing_var.set(self.format_pressure(self.sim.roughing_torr))
-        self.pressure_voltage_var.set(f"{self.simulate_pressure_voltage():0.2f}")
 
         progress = self.sim.target_progress_percent(target_value)
         self.bar["value"] = progress
