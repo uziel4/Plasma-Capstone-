@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PUPR Plasma Vacuum Controller</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="console">
+      <h1>PUPR PLASMA MOBILE REACTOR VACUUM CONTROLLER VER. 2.0</h1>
+
+      <section class="layout">
+        <aside class="left-column">
+          <section class="auto-box">
+            <h2>Auto</h2>
+            <div class="auto-buttons">
+              <button class="outline-button" id="autoStart" data-action="/api/auto/start">START</button>
+              <button class="outline-button" id="autoStop" data-action="/api/auto/stop">STOP</button>
+            </div>
+            <label class="target-label" for="targetInput">VACUUM (mTorr)</label>
+            <input id="targetInput" class="console-input" inputmode="decimal" value="145.000">
+          </section>
+
+          <section class="manual-box">
+            <h2>MANUAL CONTROL</h2>
+            <button class="manual-button" id="roughingBtn" data-action="/api/manual/roughing">
+              <span>Roughing Pump</span><i></i>
+            </button>
+            <button class="manual-button" id="turboBtn" data-action="/api/manual/turbo">
+              <span>Turbomolecular Pump</span><i></i>
+            </button>
+            <button class="manual-button" id="massFlowBtn" data-action="/api/manual/mass-flow">
+              <span>Mass flow</span><i></i>
+            </button>
+          </section>
+        </aside>
+
+        <section class="main-grid">
+          <section class="hv-panel bordered-panel">
+            <h2>HIGH VOLTAGE SOURCE</h2>
+            <div class="hv-modules">
+              <section class="hv-module">
+                <label for="voltageInput">VOLTAGE (V)</label>
+                <input id="voltageInput" class="console-input" inputmode="decimal" value="500.00">
+                <div class="small-actions">
+                  <button class="outline-button" id="applyVoltage">APPLY</button>
+                  <button class="outline-button" id="resetVoltage">RESET</button>
+                </div>
+              </section>
+              <section class="hv-module">
+                <label for="timerInput">TIMER (HH:MM:SS)</label>
+                <input id="timerInput" class="console-input" value="00:00:30">
+                <div class="small-actions">
+                  <button class="outline-button" id="hvToggle" data-action="/api/hv/toggle">START</button>
+                  <button class="outline-button" id="timerReset">RESET</button>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <section class="chamber-panel bordered-panel">
+            <h2>CHAMBER VACUUM</h2>
+            <div class="chamber-readouts">
+              <div id="pressure" class="dark-readout">WAITING</div>
+              <div class="dark-readout"><span>Live</span> <strong>60s</strong></div>
+            </div>
+            <div class="graph-box">
+              <canvas id="chart" width="900" height="440"></canvas>
+            </div>
+          </section>
+
+          <aside class="right-column">
+            <section class="roughing-panel bordered-panel">
+              <h2>ROUGHING LINE VACUUM</h2>
+              <div id="roughingPressure" class="dark-readout">WAITING</div>
+              <div class="bargraph-title">BARGRAPH</div>
+              <div class="bargraph">
+                <span id="progressBar"></span>
+              </div>
+              <div id="progressText" class="bargraph-text">0% TO TARGET</div>
+            </section>
+
+            <section class="environment-panel bordered-panel">
+              <h2>ENVIRONMENTAL DATA</h2>
+              <dl>
+                <div><dt>DAQC2 A0</dt><dd id="voltageReadout">WAITING</dd></div>
+                <div><dt>972B SENSOR</dt><dd id="sensorReadout">WAITING</dd></div>
+                <div><dt>RELAY MODE</dt><dd id="relayMode">READY</dd></div>
+                <div><dt>STATUS</dt><dd id="status">SYSTEM READY</dd></div>
+                <div><dt>MODE</dt><dd id="mode">MANUAL</dd></div>
+                <div><dt>HV</dt><dd id="hvState">OFF</dd></div>
+                <div><dt>ROUGHING</dt><dd id="roughingState">OFF</dd></div>
+                <div><dt>MASS FLOW</dt><dd id="massFlowState">OFF</dd></div>
+              </dl>
+            </section>
+          </aside>
+        </section>
+      </section>
+
+      <button class="reset-button" data-action="/api/reset">RESET SYSTEM</button>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
