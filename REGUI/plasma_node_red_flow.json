@@ -1,0 +1,779 @@
+[
+  {
+    "id": "tab_plasma",
+    "type": "tab",
+    "label": "Plasma Reactor",
+    "disabled": false,
+    "info": "Node-RED dashboard for Python PlasmaController over MQTT"
+  },
+  {
+    "id": "mqtt_local",
+    "type": "mqtt-broker",
+    "name": "Local Mosquitto",
+    "broker": "localhost",
+    "port": "1883",
+    "clientid": "node-red-plasma-dashboard",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true
+  },
+  {
+    "id": "ui_tab_plasma",
+    "type": "ui_tab",
+    "name": "Plasma Reactor",
+    "icon": "dashboard",
+    "order": 1,
+    "disabled": false,
+    "hidden": false
+  },
+  {
+    "id": "ui_group_auto",
+    "type": "ui_group",
+    "name": "Auto Control",
+    "tab": "ui_tab_plasma",
+    "order": 1,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "ui_group_manual",
+    "type": "ui_group",
+    "name": "Manual Control",
+    "tab": "ui_tab_plasma",
+    "order": 2,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "ui_group_hv",
+    "type": "ui_group",
+    "name": "High Voltage",
+    "tab": "ui_tab_plasma",
+    "order": 3,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "ui_group_vacuum",
+    "type": "ui_group",
+    "name": "Vacuum / Sensor",
+    "tab": "ui_tab_plasma",
+    "order": 4,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "ui_group_status",
+    "type": "ui_group",
+    "name": "Status",
+    "tab": "ui_tab_plasma",
+    "order": 5,
+    "disp": true,
+    "width": "12",
+    "collapse": false
+  },
+  {
+    "id": "mqtt_state_in",
+    "type": "mqtt in",
+    "z": "tab_plasma",
+    "name": "plasma/state",
+    "topic": "plasma/state",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "mqtt_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 140,
+    "y": 80,
+    "wires": [
+      [
+        "split_state"
+      ]
+    ]
+  },
+  {
+    "id": "split_state",
+    "type": "function",
+    "z": "tab_plasma",
+    "name": "Split state to widgets",
+    "func": "const s = msg.payload || {};\nreturn [\n  {payload: s.pressureTorr, topic:'Pressure Torr'},\n  {payload: s.pressureTorr, topic:'Pressure Chart'},\n  {payload: s.progress || 0, topic:'Progress'},\n  {payload: s.status || 'UNKNOWN'},\n  {payload: s.mode || 'MANUAL'},\n  {payload: s.voltage || 0},\n  {payload: s.timer || '00:00:00'},\n  {payload: s.roughingActive ? 'ON' : 'OFF'},\n  {payload: s.massFlowActive ? 'ON' : 'OFF'},\n  {payload: s.hvActive ? 'HV ON' : 'HV OFF'},\n  {payload: s.relaySimulated ? 'Simulation' : 'Hardware'}\n];",
+    "outputs": 11,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 370,
+    "y": 80,
+    "wires": [
+      [
+        "g_pressure"
+      ],
+      [
+        "c_pressure"
+      ],
+      [
+        "g_progress"
+      ],
+      [
+        "t_status"
+      ],
+      [
+        "t_mode"
+      ],
+      [
+        "t_voltage"
+      ],
+      [
+        "t_timer"
+      ],
+      [
+        "t_roughing"
+      ],
+      [
+        "t_mass_flow"
+      ],
+      [
+        "t_hv"
+      ],
+      [
+        "t_relay_mode"
+      ]
+    ]
+  },
+  {
+    "id": "g_pressure",
+    "type": "ui_gauge",
+    "z": "tab_plasma",
+    "name": "Pressure",
+    "group": "ui_group_vacuum",
+    "order": 1,
+    "width": 6,
+    "height": 4,
+    "gtype": "gage",
+    "title": "Chamber Vacuum",
+    "label": "Torr",
+    "format": "{{value | number:6}}",
+    "min": 0,
+    "max": "0.15",
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "0.005",
+    "seg2": "0.05",
+    "diff": false,
+    "className": "",
+    "x": 640,
+    "y": 30,
+    "wires": []
+  },
+  {
+    "id": "c_pressure",
+    "type": "ui_chart",
+    "z": "tab_plasma",
+    "name": "Pressure Chart",
+    "group": "ui_group_vacuum",
+    "order": 2,
+    "width": 6,
+    "height": 4,
+    "label": "Live Pressure",
+    "chartType": "line",
+    "legend": "false",
+    "xformat": "HH:mm:ss",
+    "interpolate": "linear",
+    "nodata": "Waiting for sensor data",
+    "dot": false,
+    "ymin": "0",
+    "ymax": "0.15",
+    "removeOlder": "1",
+    "removeOlderPoints": "240",
+    "removeOlderUnit": "60",
+    "cutout": 0,
+    "useOneColor": false,
+    "useUTC": false,
+    "colors": [
+      "#1f77b4",
+      "#aec7e8",
+      "#ff7f0e",
+      "#2ca02c",
+      "#98df8a",
+      "#d62728",
+      "#ff9896",
+      "#9467bd",
+      "#c5b0d5"
+    ],
+    "outputs": 1,
+    "className": "",
+    "x": 660,
+    "y": 70,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "g_progress",
+    "type": "ui_gauge",
+    "z": "tab_plasma",
+    "name": "Target Progress",
+    "group": "ui_group_vacuum",
+    "order": 3,
+    "width": 6,
+    "height": 3,
+    "gtype": "wave",
+    "title": "Target Progress",
+    "label": "%",
+    "format": "{{value | number:0}}",
+    "min": 0,
+    "max": "100",
+    "colors": [
+      "#ca3838",
+      "#e6e600",
+      "#00b500"
+    ],
+    "seg1": "30",
+    "seg2": "80",
+    "diff": false,
+    "className": "",
+    "x": 670,
+    "y": 110,
+    "wires": []
+  },
+  {
+    "id": "t_status",
+    "type": "ui_text",
+    "z": "tab_plasma",
+    "group": "ui_group_status",
+    "order": 1,
+    "width": 12,
+    "height": 1,
+    "name": "Status",
+    "label": "Status",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 630,
+    "y": 150,
+    "wires": []
+  },
+  {
+    "id": "t_mode",
+    "type": "ui_text",
+    "z": "tab_plasma",
+    "group": "ui_group_status",
+    "order": 2,
+    "width": 3,
+    "height": 1,
+    "name": "Mode",
+    "label": "Mode",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 620,
+    "y": 190,
+    "wires": []
+  },
+  {
+    "id": "t_voltage",
+    "type": "ui_text",
+    "z": "tab_plasma",
+    "group": "ui_group_status",
+    "order": 3,
+    "width": 3,
+    "height": 1,
+    "name": "Voltage",
+    "label": "DAQC2 A0",
+    "format": "{{msg.payload | number:4}} V",
+    "layout": "row-spread",
+    "className": "",
+    "x": 630,
+    "y": 230,
+    "wires": []
+  },
+  {
+    "id": "t_timer",
+    "type": "ui_text",
+    "z": "tab_plasma",
+    "group": "ui_group_status",
+    "order": 4,
+    "width": 3,
+    "height": 1,
+    "name": "Timer",
+    "label": "Timer",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 620,
+    "y": 270,
+    "wires": []
+  },
+  {
+    "id": "t_roughing",
+    "type": "ui_text",
+    "z": "tab_plasma",
+    "group": "ui_group_status",
+    "order": 5,
+    "width": 3,
+    "height": 1,
+    "name": "Roughing State",
+    "label": "Roughing",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 650,
+    "y": 310,
+    "wires": []
+  },
+  {
+    "id": "t_mass_flow",
+    "type": "ui_text",
+    "z": "tab_plasma",
+    "group": "ui_group_status",
+    "order": 6,
+    "width": 3,
+    "height": 1,
+    "name": "Mass Flow State",
+    "label": "Mass Flow",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 660,
+    "y": 350,
+    "wires": []
+  },
+  {
+    "id": "t_hv",
+    "type": "ui_text",
+    "z": "tab_plasma",
+    "group": "ui_group_status",
+    "order": 7,
+    "width": 3,
+    "height": 1,
+    "name": "HV State",
+    "label": "HV",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 620,
+    "y": 390,
+    "wires": []
+  },
+  {
+    "id": "t_relay_mode",
+    "type": "ui_text",
+    "z": "tab_plasma",
+    "group": "ui_group_status",
+    "order": 8,
+    "width": 3,
+    "height": 1,
+    "name": "Relay Mode",
+    "label": "Relay Mode",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 650,
+    "y": 430,
+    "wires": []
+  },
+  {
+    "id": "btn_auto_start",
+    "type": "ui_button",
+    "z": "tab_plasma",
+    "name": "Auto Start",
+    "group": "ui_group_auto",
+    "order": 1,
+    "width": 3,
+    "height": 1,
+    "passthru": false,
+    "label": "AUTO START",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "play_arrow",
+    "payload": "auto_start",
+    "payloadType": "str",
+    "topic": "action",
+    "topicType": "str",
+    "x": 120,
+    "y": 500,
+    "wires": [
+      [
+        "cmd_action"
+      ]
+    ]
+  },
+  {
+    "id": "btn_auto_stop",
+    "type": "ui_button",
+    "z": "tab_plasma",
+    "name": "Auto Stop",
+    "group": "ui_group_auto",
+    "order": 2,
+    "width": 3,
+    "height": 1,
+    "passthru": false,
+    "label": "AUTO STOP",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "stop",
+    "payload": "auto_stop",
+    "payloadType": "str",
+    "topic": "action",
+    "topicType": "str",
+    "x": 120,
+    "y": 540,
+    "wires": [
+      [
+        "cmd_action"
+      ]
+    ]
+  },
+  {
+    "id": "target_input",
+    "type": "ui_numeric",
+    "z": "tab_plasma",
+    "name": "Target mTorr",
+    "label": "Vacuum Target mTorr",
+    "tooltip": "",
+    "group": "ui_group_auto",
+    "order": 3,
+    "width": 6,
+    "height": 1,
+    "wrap": false,
+    "passthru": true,
+    "topic": "set_target",
+    "topicType": "str",
+    "format": "{{value}}",
+    "min": "0.001",
+    "max": "1000",
+    "step": "0.001",
+    "className": "",
+    "x": 130,
+    "y": 580,
+    "wires": [
+      [
+        "cmd_value"
+      ]
+    ]
+  },
+  {
+    "id": "btn_roughing",
+    "type": "ui_button",
+    "z": "tab_plasma",
+    "name": "Toggle Roughing",
+    "group": "ui_group_manual",
+    "order": 1,
+    "width": 6,
+    "height": 1,
+    "passthru": false,
+    "label": "TOGGLE ROUGHING PUMP",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "settings_power",
+    "payload": "toggle_roughing",
+    "payloadType": "str",
+    "topic": "action",
+    "topicType": "str",
+    "x": 140,
+    "y": 640,
+    "wires": [
+      [
+        "cmd_action"
+      ]
+    ]
+  },
+  {
+    "id": "btn_turbo",
+    "type": "ui_button",
+    "z": "tab_plasma",
+    "name": "Toggle Turbo",
+    "group": "ui_group_manual",
+    "order": 2,
+    "width": 6,
+    "height": 1,
+    "passthru": false,
+    "label": "TOGGLE TURBO PUMP",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "settings_power",
+    "payload": "toggle_turbo",
+    "payloadType": "str",
+    "topic": "action",
+    "topicType": "str",
+    "x": 130,
+    "y": 680,
+    "wires": [
+      [
+        "cmd_action"
+      ]
+    ]
+  },
+  {
+    "id": "btn_mass_flow",
+    "type": "ui_button",
+    "z": "tab_plasma",
+    "name": "Toggle Mass Flow",
+    "group": "ui_group_manual",
+    "order": 3,
+    "width": 6,
+    "height": 1,
+    "passthru": false,
+    "label": "TOGGLE MASS FLOW",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "settings_power",
+    "payload": "toggle_mass_flow",
+    "payloadType": "str",
+    "topic": "action",
+    "topicType": "str",
+    "x": 140,
+    "y": 720,
+    "wires": [
+      [
+        "cmd_action"
+      ]
+    ]
+  },
+  {
+    "id": "hv_voltage_input",
+    "type": "ui_numeric",
+    "z": "tab_plasma",
+    "name": "HV Voltage",
+    "label": "HV Voltage V",
+    "tooltip": "",
+    "group": "ui_group_hv",
+    "order": 1,
+    "width": 3,
+    "height": 1,
+    "wrap": false,
+    "passthru": true,
+    "topic": "set_hv_voltage",
+    "topicType": "str",
+    "format": "{{value}}",
+    "min": "0",
+    "max": "5000",
+    "step": "1",
+    "className": "",
+    "x": 130,
+    "y": 780,
+    "wires": [
+      [
+        "cmd_value"
+      ]
+    ]
+  },
+  {
+    "id": "timer_text_input",
+    "type": "ui_text_input",
+    "z": "tab_plasma",
+    "name": "HV Timer",
+    "label": "HV Timer HH:MM:SS",
+    "tooltip": "",
+    "group": "ui_group_hv",
+    "order": 2,
+    "width": 3,
+    "height": 1,
+    "passthru": true,
+    "mode": "text",
+    "delay": "300",
+    "topic": "set_timer",
+    "sendOnBlur": true,
+    "className": "",
+    "topicType": "str",
+    "x": 130,
+    "y": 820,
+    "wires": [
+      [
+        "cmd_value"
+      ]
+    ]
+  },
+  {
+    "id": "btn_hv_toggle",
+    "type": "ui_button",
+    "z": "tab_plasma",
+    "name": "Toggle HV",
+    "group": "ui_group_hv",
+    "order": 3,
+    "width": 3,
+    "height": 1,
+    "passthru": false,
+    "label": "HV START/STOP",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "flash_on",
+    "payload": "toggle_hv",
+    "payloadType": "str",
+    "topic": "action",
+    "topicType": "str",
+    "x": 120,
+    "y": 860,
+    "wires": [
+      [
+        "cmd_action"
+      ]
+    ]
+  },
+  {
+    "id": "btn_voltage_reset",
+    "type": "ui_button",
+    "z": "tab_plasma",
+    "name": "Reset Voltage",
+    "group": "ui_group_hv",
+    "order": 4,
+    "width": 3,
+    "height": 1,
+    "passthru": false,
+    "label": "RESET VOLTAGE",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "refresh",
+    "payload": "reset_hv_voltage",
+    "payloadType": "str",
+    "topic": "action",
+    "topicType": "str",
+    "x": 130,
+    "y": 900,
+    "wires": [
+      [
+        "cmd_action"
+      ]
+    ]
+  },
+  {
+    "id": "btn_timer_reset",
+    "type": "ui_button",
+    "z": "tab_plasma",
+    "name": "Reset Timer",
+    "group": "ui_group_hv",
+    "order": 5,
+    "width": 3,
+    "height": 1,
+    "passthru": false,
+    "label": "RESET TIMER",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "timer_off",
+    "payload": "reset_hv_timer",
+    "payloadType": "str",
+    "topic": "action",
+    "topicType": "str",
+    "x": 130,
+    "y": 940,
+    "wires": [
+      [
+        "cmd_action"
+      ]
+    ]
+  },
+  {
+    "id": "btn_reset",
+    "type": "ui_button",
+    "z": "tab_plasma",
+    "name": "Reset System",
+    "group": "ui_group_status",
+    "order": 9,
+    "width": 12,
+    "height": 1,
+    "passthru": false,
+    "label": "RESET SYSTEM",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "#991b1b",
+    "className": "",
+    "icon": "warning",
+    "payload": "reset",
+    "payloadType": "str",
+    "topic": "action",
+    "topicType": "str",
+    "x": 130,
+    "y": 980,
+    "wires": [
+      [
+        "cmd_action"
+      ]
+    ]
+  },
+  {
+    "id": "cmd_action",
+    "type": "function",
+    "z": "tab_plasma",
+    "name": "Build action command",
+    "func": "msg.topic = 'plasma/cmd';\nmsg.payload = { action: msg.payload };\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 410,
+    "y": 660,
+    "wires": [
+      [
+        "mqtt_cmd_out"
+      ]
+    ]
+  },
+  {
+    "id": "cmd_value",
+    "type": "function",
+    "z": "tab_plasma",
+    "name": "Build value command",
+    "func": "const action = msg.topic;\nconst value = msg.payload;\nmsg.topic = 'plasma/cmd';\nmsg.payload = { action, value };\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 410,
+    "y": 820,
+    "wires": [
+      [
+        "mqtt_cmd_out"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt_cmd_out",
+    "type": "mqtt out",
+    "z": "tab_plasma",
+    "name": "plasma/cmd",
+    "topic": "plasma/cmd",
+    "qos": "0",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "mqtt_local",
+    "x": 650,
+    "y": 740,
+    "wires": []
+  }
+]
