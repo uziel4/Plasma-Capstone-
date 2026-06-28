@@ -17,7 +17,7 @@ class DAQC2Reader:
             return
 
         try:
-            import piplates.DAQCplate as DAQC2
+            import piplates.DAQC2plate as DAQC2
             self._daqc2 = DAQC2
         except Exception:
             if self.test_mode == "AUTO":

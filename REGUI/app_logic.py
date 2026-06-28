@@ -31,7 +31,7 @@ class PlasmaController:
         self.turbo_active = False
         self.mass_flow_active = False
 
-        self.target_mtorr = 1.0
+        self.target_mtorr = 0.0
         self.hv_voltage = 0.0
         self.hv_voltage_applied = False
         self.hv_start_time = None
@@ -42,6 +42,7 @@ class PlasmaController:
         self.current_voltage = 0.0
         self.current_torr = 1.0e-1
         self.initial_torr = 1.0e-1
+        self.progress_start_torr = self.current_torr
         self.sensor_error = None
         self.status = "SYSTEM READY"
 
@@ -55,11 +56,22 @@ class PlasmaController:
 
     def start_auto(self):
         with self.lock:
+            if not self.has_valid_target(self.target_mtorr):
+                self.auto_active = False
+                self.hold_mode = False
+                self.roughing_active = False
+                self.mass_flow_active = False
+                self.turbo_active = False
+                self.status = "ENTER TARGET VACUUM"
+                self._apply_relays_locked()
+                return False
+
             self.auto_active = True
             self.hold_mode = False
             self.roughing_active = True
             self.mass_flow_active = False
             self.turbo_active = False
+            self.progress_start_torr = max(self.current_torr, 1e-9)
             self.status = "AUTO PUMPDOWN ACTIVE"
             self._apply_relays_locked()
 
@@ -81,7 +93,7 @@ class PlasmaController:
             self.roughing_active = False
             self.turbo_active = False
             self.mass_flow_active = False
-            self.target_mtorr = 1.0
+            self.target_mtorr = 0.0
             self.hv_voltage = 0.0
             self.hv_voltage_applied = False
             self.hv_start_time = None
@@ -91,6 +103,7 @@ class PlasmaController:
             self.relay.buzzer_off()
             self.graph_start_timestamp = None
             self.last_sensor_timestamp = None
+            self.progress_start_torr = max(self.current_torr, 1e-9)
             self.points.clear()
             self.status = "SYSTEM RESET"
             self._apply_relays_locked()
@@ -98,9 +111,13 @@ class PlasmaController:
     def set_target(self, target_mtorr):
         with self.lock:
             try:
-                self.target_mtorr = max(float(target_mtorr), 0.001)
+                self.target_mtorr = max(float(target_mtorr), 0.0)
             except (TypeError, ValueError):
-                self.target_mtorr = 1.0
+                self.target_mtorr = 0.0
+            self.progress_start_torr = max(self.current_torr, 1e-9)
+            if self.auto_active:
+                self.hold_mode = False
+                self._update_auto_logic_locked()
 
     def toggle_roughing(self):
         with self.lock:
@@ -173,6 +190,12 @@ class PlasmaController:
     def get_state(self):
         with self.lock:
             progress = self.target_progress_percent(self.current_torr, self.target_mtorr)
+            progress_text = f"{progress:0.0f}% TO TARGET"
+            if not self.has_valid_target(self.target_mtorr):
+                progress_text = "0% - ENTER TARGET"
+            elif self.hold_mode:
+                progress_text = f"{progress:0.0f}% - HOLDING TARGET"
+
             return {
                 "status": self.status,
                 "mode": "AUTO" if self.auto_active else "MANUAL",
@@ -190,7 +213,7 @@ class PlasmaController:
                 "pressureTorr": self.current_torr,
                 "pressureText": self.format_pressure(self.current_torr),
                 "progress": progress,
-                "progressText": "HOLDING TARGET" if self.hold_mode else f"{progress:0.0f}% TO TARGET",
+                "progressText": progress_text,
                 "sensorError": self.sensor_error,
                 "relaySimulated": self.relay.simulated,
                 "points": list(self.points),
@@ -228,6 +251,7 @@ class PlasmaController:
 
             if not self.points:
                 self.initial_torr = pressure
+                self.progress_start_torr = pressure
                 self.graph_start_timestamp = timestamp
 
             self._update_auto_logic_locked()
@@ -248,6 +272,15 @@ class PlasmaController:
         if not self.auto_active:
             return
 
+        if not self.has_valid_target(self.target_mtorr):
+            self.hold_mode = False
+            self.roughing_active = False
+            self.turbo_active = False
+            self.mass_flow_active = False
+            self.status = "ENTER TARGET VACUUM"
+            self._apply_relays_locked()
+            return
+
         target_torr = self.parse_target_torr(self.target_mtorr)
         lower_limit = target_torr * (1.0 - VACUUM_TOLERANCE)
         upper_limit = target_torr * (1.0 + VACUUM_TOLERANCE)
@@ -262,9 +295,9 @@ class PlasmaController:
         if not self.hold_mode:
             if self.current_torr <= target_torr:
                 self.hold_mode = True
-                self.roughing_active = False
+                self.roughing_active = True
                 self.turbo_active = False
-                self.mass_flow_active = False
+                self.mass_flow_active = True
                 self.status = "TARGET REACHED - HOLD MODE"
             else:
                 self.roughing_active = True
@@ -273,17 +306,15 @@ class PlasmaController:
                 self.status = "ROUGHING PUMP ACTIVE"
         else:
             self.turbo_active = False
+            self.roughing_active = True
             if self.current_torr < lower_limit:
                 self.mass_flow_active = True
-                self.roughing_active = False
                 self.status = "MASS FLOW ACTIVE - REGULATING"
             elif self.current_torr > upper_limit:
                 self.mass_flow_active = False
-                self.roughing_active = True
-                self.status = "VACUUM LOSS - ROUGHING ACTIVE"
+                self.status = "VACUUM LOSS - MASS FLOW OFF"
             else:
-                self.mass_flow_active = False
-                self.roughing_active = False
+                self.mass_flow_active = True
                 self.status = "HOLDING TARGET VACUUM"
 
         current = (
@@ -322,16 +353,26 @@ class PlasmaController:
             self.last_relay_states[relay_number] = active
 
     @staticmethod
+    def has_valid_target(target_mtorr):
+        try:
+            return float(target_mtorr) > 0.0
+        except (TypeError, ValueError):
+            return False
+
+    @staticmethod
     def parse_target_torr(target_mtorr):
         try:
             target_torr = float(target_mtorr) / 1000.0
         except (TypeError, ValueError):
-            target_torr = 1.0e-3
+            target_torr = 0.0
         return max(target_torr, 1.0e-6)
 
     def target_progress_percent(self, current_torr, target_mtorr):
+        if not self.has_valid_target(target_mtorr):
+            return 0.0
+
         target_torr = self.parse_target_torr(target_mtorr)
-        start_torr = max(self.initial_torr, 1e-6)
+        start_torr = max(self.progress_start_torr, 1e-9)
         current_torr = max(current_torr, 1e-6)
 
         if current_torr <= target_torr:
