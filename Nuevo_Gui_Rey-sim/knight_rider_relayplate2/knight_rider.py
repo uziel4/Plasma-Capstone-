@@ -14,18 +14,18 @@ except ImportError as exc:
 
 
 FIRST_RELAY = 1
-LAST_RELAY = 7
+LAST_RELAY = 8
 
 
 def knight_rider(address: int, delay: float, cycles: int) -> None:
-    """Recorre K1..K7..K1; cycles=0 mantiene el efecto indefinidamente."""
+    """Recorre K1..K8..K1; cycles=0 mantiene el efecto indefinidamente."""
     board_id = RELAY2.getID(address)
     if "RELAYplate2" not in str(board_id):
         raise RuntimeError(
             f"No se encontro una RELAYplate2 en la direccion {address}: {board_id!r}"
         )
 
-    # No repetir K1/K7 al cambiar de direccion produce un movimiento uniforme.
+    # No repetir K1/K8 al cambiar de direccion produce un movimiento uniforme.
     sequence = list(range(FIRST_RELAY, LAST_RELAY + 1)) + list(
         range(LAST_RELAY - 1, FIRST_RELAY, -1)
     )
@@ -49,7 +49,7 @@ def knight_rider(address: int, delay: float, cycles: int) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Barrido Knight Rider en los 7 relays de una RELAYplate2."
+        description="Barrido Knight Rider en los 8 relays de una RELAYplate2."
     )
     parser.add_argument(
         "--address",

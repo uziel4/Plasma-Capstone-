@@ -1,10 +1,10 @@
 # Knight Rider para RELAYplate2
 
-Este programa crea un barrido continuo en los siete relés de una Pi-Plates
+Este programa crea un barrido continuo en los ocho relés de una Pi-Plates
 RELAYplate2:
 
 ```text
-K1 -> K2 -> K3 -> K4 -> K5 -> K6 -> K7 -> K6 -> ... -> K2 -> K1
+K1 -> K2 -> K3 -> K4 -> K5 -> K6 -> K7 -> K8 -> K7 -> ... -> K2 -> K1
 ```
 
 ## Preparación en la Raspberry Pi
