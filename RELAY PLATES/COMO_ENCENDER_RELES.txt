@@ -1,0 +1,122 @@
+COMO CONTROLAR LAS DOS PI-PLATES RELAYplate2
+================================================
+
+Configuracion del stack:
+
+  RELAYplate2 numero 1: address 0
+  RELAYplate2 numero 2: address 1
+
+Cada placa tiene ocho reles, numerados del 1 al 8.
+
+
+1. IMPORTAR LA LIBRERIA
+-----------------------
+
+En un programa de Python se comienza con:
+
+    import piplates.RELAYplate2 as RELAY2
+
+Si la libreria no esta instalada en la Raspberry Pi:
+
+    python3 -m pip install piplates
+
+
+2. ENCENDER RELES DE LA PLACA ADDRESS 0
+----------------------------------------
+
+    RELAY2.relayON(0, 1)    # Enciende el rele 1
+    RELAY2.relayON(0, 2)    # Enciende el rele 2
+    RELAY2.relayON(0, 3)    # Enciende el rele 3
+    RELAY2.relayON(0, 4)    # Enciende el rele 4
+    RELAY2.relayON(0, 5)    # Enciende el rele 5
+    RELAY2.relayON(0, 6)    # Enciende el rele 6
+    RELAY2.relayON(0, 7)    # Enciende el rele 7
+    RELAY2.relayON(0, 8)    # Enciende el rele 8
+
+
+3. ENCENDER RELES DE LA PLACA ADDRESS 1
+----------------------------------------
+
+    RELAY2.relayON(1, 1)    # Enciende el rele 1
+    RELAY2.relayON(1, 2)    # Enciende el rele 2
+    RELAY2.relayON(1, 3)    # Enciende el rele 3
+    RELAY2.relayON(1, 4)    # Enciende el rele 4
+    RELAY2.relayON(1, 5)    # Enciende el rele 5
+    RELAY2.relayON(1, 6)    # Enciende el rele 6
+    RELAY2.relayON(1, 7)    # Enciende el rele 7
+    RELAY2.relayON(1, 8)    # Enciende el rele 8
+
+
+4. APAGAR UN RELE
+------------------
+
+La forma general es:
+
+    RELAY2.relayOFF(address, numero_de_rele)
+
+Ejemplos:
+
+    RELAY2.relayOFF(0, 1)   # Apaga el rele 1 de la placa address 0
+    RELAY2.relayOFF(1, 8)   # Apaga el rele 8 de la placa address 1
+
+
+5. ENCENDER O APAGAR TODOS LOS RELES
+-------------------------------------
+
+Encender los ocho reles de la placa address 0:
+
+    RELAY2.relayALL(0, 255)
+
+Apagar los ocho reles de la placa address 0:
+
+    RELAY2.relayALL(0, 0)
+
+Encender los ocho reles de la placa address 1:
+
+    RELAY2.relayALL(1, 255)
+
+Apagar los ocho reles de la placa address 1:
+
+    RELAY2.relayALL(1, 0)
+
+Apagar las dos placas:
+
+    RELAY2.relayALL(0, 0)
+    RELAY2.relayALL(1, 0)
+
+
+6. EJEMPLO COMPLETO
+--------------------
+
+Este ejemplo enciende por dos segundos el rele 1 de cada placa y luego
+los apaga:
+
+    import time
+    import piplates.RELAYplate2 as RELAY2
+
+    try:
+        RELAY2.relayON(0, 1)
+        RELAY2.relayON(1, 1)
+        time.sleep(2)
+    finally:
+        RELAY2.relayALL(0, 0)
+        RELAY2.relayALL(1, 0)
+
+
+7. SIGNIFICADO DE LOS DOS NUMEROS
+----------------------------------
+
+En este comando:
+
+    RELAY2.relayON(1, 6)
+
+El primer numero (1) es el address de la placa.
+El segundo numero (6) es el rele que se quiere controlar.
+
+
+ADVERTENCIA DE SEGURIDAD
+------------------------
+
+Desconecta la alimentacion antes de conectar o cambiar cargas. Los contactos
+de los reles pueden manejar voltajes peligrosos. No trabajes con terminales
+energizados ni cables expuestos.

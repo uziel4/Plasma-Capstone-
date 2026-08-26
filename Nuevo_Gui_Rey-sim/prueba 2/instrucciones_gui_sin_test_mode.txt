@@ -1,0 +1,376 @@
+INSTRUCCIONES - GUI VACUUM CONTROLLER SIN TEST MODE
+===================================================
+
+Este documento corresponde a la primera versión del código que usa hardware real directamente.
+Esta versión NO tiene TEST MODE. Eso significa que debe correr en la Raspberry Pi con el DAQC2plate,
+el sensor 972B y el módulo de relays conectados.
+
+---------------------------------------------------
+1. ARCHIVOS DEL PROYECTO
+---------------------------------------------------
+
+Debes tener estos archivos en la misma carpeta:
+
+main.py
+gui.py
+config.py
+daqc2_reader.py
+relay_controller.py
+widgets.py
+
+---------------------------------------------------
+2. QUÉ HACE CADA ARCHIVO
+---------------------------------------------------
+
+main.py
+------
+Archivo principal. Ejecuta la aplicación.
+
+Comando para correr:
+
+python3 main.py
+
+
+config.py
+---------
+Archivo donde se configuran los parámetros principales:
+
+- Título del GUI
+- Tamaño de ventana
+- Dirección del DAQC2plate
+- Canal analógico del sensor
+- Dirección I2C del relay module
+- Relay asignado a la roughing pump
+- Relay asignado al mass flow
+- Tolerancia del control automático
+- Colores del GUI
+
+
+daqc2_reader.py
+---------------
+Lee el voltaje real desde el DAQC2plate.
+
+Usa:
+
+import piplates.DAQC2plate as DAQC2
+
+El sensor 972B debe estar conectado al canal A0 del DAQC2plate.
+
+La fórmula usada es:
+
+P(Torr) = 10^(2V - 11)
+
+Donde:
+
+V = voltaje leído desde el DAQC2
+P = presión calculada en Torr
+
+
+relay_controller.py
+-------------------
+Controla el módulo de 8 relays por I2C.
+
+La lógica usada es active-low:
+
+0 = Relay ON
+1 = Relay OFF
+
+Relay 1 = Roughing Pump
+Relay 2 = Mass Flow
+
+
+gui.py
+------
+Contiene la interfaz gráfica completa y la lógica de control.
+
+Aquí se maneja:
+
+- Botón START
+- Botón STOP
+- Botón RESET
+- Lectura del sensor real
+- Actualización de gráfica
+- Activación del Relay 1
+- Activación del Relay 2
+- Hold Mode
+- Lógica de regulación del vacío
+
+
+widgets.py
+----------
+Archivo auxiliar para funciones visuales pequeñas.
+
+
+---------------------------------------------------
+3. DEPENDENCIAS NECESARIAS EN RASPBERRY PI
+---------------------------------------------------
+
+Instala las dependencias principales:
+
+pip install customtkinter matplotlib smbus2
+
+Para Pi-Plates NO uses:
+
+pip install piplates
+
+Eso no funciona.
+
+Debes instalar Pi-Plates desde GitHub:
+
+git clone https://github.com/pi-plates/pi-plates.git
+cd pi-plates
+sudo python3 setup.py install
+
+
+---------------------------------------------------
+4. PRUEBA DEL DAQC2PLATE
+---------------------------------------------------
+
+Después de instalar Pi-Plates, prueba:
+
+python3 -c "import piplates.DAQC2plate as DAQC2; print('DAQC2 OK')"
+
+Si aparece:
+
+DAQC2 OK
+
+entonces la librería del DAQC2 está funcionando.
+
+
+---------------------------------------------------
+5. PRUEBA DEL RELAY MODULE
+---------------------------------------------------
+
+Instala smbus2:
+
+pip install smbus2
+
+Verifica que el módulo I2C aparezca:
+
+sudo i2cdetect -y 1
+
+Si ves la dirección 21 en la tabla, entonces en config.py debe estar:
+
+RELAY_I2C_ADDRESS = 0x21
+
+Si aparece otra dirección, cámbiala en config.py.
+
+
+---------------------------------------------------
+6. CONFIGURACIÓN DEL DAQC2
+---------------------------------------------------
+
+En config.py:
+
+DAQC2_ADDRESS = 0
+DAQC2_CHANNEL = 0
+
+Esto significa:
+
+DAQC2 address 0
+Canal A0
+
+Si el sensor está conectado a A0, deja:
+
+DAQC2_CHANNEL = 0
+
+Referencia de canales:
+
+A0 = 0
+A1 = 1
+A2 = 2
+A3 = 3
+
+
+---------------------------------------------------
+7. CONFIGURACIÓN DE RELAYS
+---------------------------------------------------
+
+En config.py:
+
+RELAY_I2C_BUS = 1
+RELAY_I2C_ADDRESS = 0x21
+
+ROUGHING_RELAY = 1
+MASS_FLOW_RELAY = 2
+
+Esto significa:
+
+Relay 1 = Roughing Pump
+Relay 2 = Mass Flow
+
+Si conectas la bomba en otro relay, cambia:
+
+ROUGHING_RELAY = número del relay
+
+Ejemplo:
+
+ROUGHING_RELAY = 3
+
+Si conectas el mass flow en otro relay, cambia:
+
+MASS_FLOW_RELAY = número del relay
+
+Ejemplo:
+
+MASS_FLOW_RELAY = 4
+
+
+---------------------------------------------------
+8. LÓGICA DEL SISTEMA
+---------------------------------------------------
+
+Cuando se presiona START:
+
+1. El sistema lee el target vacuum escrito en mTorr.
+2. Activa el Relay 1.
+3. Relay 1 enciende o envía señal a la roughing pump.
+4. El DAQC2 lee el voltaje del sensor 972B.
+5. El GUI convierte el voltaje a presión usando:
+
+   P(Torr) = 10^(2V - 11)
+
+6. Si la presión todavía no llega al target, Relay 1 sigue activo.
+7. Cuando la presión llega al target, el sistema entra en HOLD MODE.
+8. En HOLD MODE:
+   - Si el vacío baja más de lo deseado, se activa Relay 2 para Mass Flow.
+   - Si se pierde vacío, se reactiva Relay 1.
+   - Si está dentro del rango aceptado, ambos relays se apagan.
+
+
+---------------------------------------------------
+9. TOLERANCIA DEL VACÍO
+---------------------------------------------------
+
+En config.py:
+
+VACUUM_TOLERANCE = 0.05
+
+Esto significa 5%.
+
+Ejemplo:
+
+Target = 1.000 mTorr
+
+Eso equivale a:
+
+1.000e-3 Torr
+
+Con tolerancia de 5%, el rango aceptable es aproximadamente:
+
+0.950e-3 Torr a 1.050e-3 Torr
+
+
+---------------------------------------------------
+10. TURBOMOLECULAR PUMP
+---------------------------------------------------
+
+En esta versión la bomba turbomolecular queda marcada como:
+
+UNAVAILABLE
+
+No activa ningún relay.
+
+Esto se dejó así porque todavía no se va a implementar la lógica real de la bomba turbomolecular.
+
+
+---------------------------------------------------
+11. IMPORTANTE SOBRE SEGURIDAD
+---------------------------------------------------
+
+No conectes bombas grandes directamente al Raspberry Pi ni a un relay pequeño sin verificar capacidad eléctrica.
+
+El relay module debe usarse como señal de control hacia un sistema adecuado, por ejemplo:
+
+- Contactor
+- Relay industrial
+- SSR adecuado
+- Driver externo
+- Sistema de protección
+
+La Raspberry Pi no debe manejar cargas de alta potencia directamente.
+
+
+---------------------------------------------------
+12. CÓMO CORRER EL PROGRAMA
+---------------------------------------------------
+
+En la Raspberry Pi, entra a la carpeta del proyecto:
+
+cd ruta/de/tu/proyecto
+
+Luego ejecuta:
+
+python3 main.py
+
+
+---------------------------------------------------
+13. ERRORES COMUNES
+---------------------------------------------------
+
+Error:
+No module named piplates
+
+Solución:
+Instalar Pi-Plates desde GitHub, no con pip.
+
+
+Error:
+No module named smbus2
+
+Solución:
+pip install smbus2
+
+
+Error:
+No relay responde
+
+Solución:
+Verifica la dirección con:
+
+sudo i2cdetect -y 1
+
+y ajusta RELAY_I2C_ADDRESS en config.py.
+
+
+Error:
+No lee presión
+
+Solución:
+Verifica:
+- DAQC2 conectado
+- Sensor 972B conectado a A0
+- DAQC2_CHANNEL = 0
+- Librería piplates instalada
+
+
+---------------------------------------------------
+14. RESUMEN DE CONFIGURACIÓN PRINCIPAL
+---------------------------------------------------
+
+config.py debe tener algo como:
+
+DAQC2_ADDRESS = 0
+DAQC2_CHANNEL = 0
+
+RELAY_I2C_BUS = 1
+RELAY_I2C_ADDRESS = 0x21
+
+ROUGHING_RELAY = 1
+MASS_FLOW_RELAY = 2
+
+VACUUM_TOLERANCE = 0.05
+
+
+---------------------------------------------------
+15. NOTA FINAL
+---------------------------------------------------
+
+Esta versión es para hardware real.
+No va a correr correctamente en Mac o Windows porque necesita:
+
+- DAQC2plate real
+- Raspberry Pi
+- I2C real
+- Relay module real
+- Sensor 972B conectado
