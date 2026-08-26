@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Efecto Knight Rider en la Pi-Plates RELAYplate2 con address 0."""
+"""Control gráfico de dos Pi-Plates RELAYplate2 (addresses 0 y 1)."""
 
-import argparse
-import time
+import tkinter as tk
+from tkinter import messagebox
 
 try:
     import piplates.RELAYplate2 as RELAY2
@@ -13,78 +13,163 @@ except ImportError as exc:
     ) from exc
 
 
-PLATE_ADDRESS = 0
-FIRST_RELAY = 1
-LAST_RELAY = 8
+PLATE_ADDRESSES = (0, 1)
+RELAYS_PER_PLATE = 8
+COLOR_OFF = "#374151"
+COLOR_ON = "#16a34a"
 
 
-def knight_rider(delay: float, cycles: int) -> None:
-    """Recorre K1..K8..K1; cycles=0 mantiene el efecto continuamente."""
-    board_id = RELAY2.getID(PLATE_ADDRESS)
-    if "RELAYplate2" not in str(board_id):
-        raise RuntimeError(
-            "No se encontro una RELAYplate2 en la direccion "
-            f"{PLATE_ADDRESS}: {board_id!r}"
+class RelayControlApp:
+    def __init__(self, root: tk.Tk) -> None:
+        self.root = root
+        self.root.title("Control de dos RELAYplate2")
+        self.root.configure(bg="#111827")
+        self.root.resizable(False, False)
+
+        self.states = {
+            (address, relay): False
+            for address in PLATE_ADDRESSES
+            for relay in range(1, RELAYS_PER_PLATE + 1)
+        }
+        self.buttons: dict[tuple[int, int], tk.Button] = {}
+
+        self._verify_plates()
+        self._build_interface()
+        self.root.protocol("WM_DELETE_WINDOW", self.close)
+
+    def _verify_plates(self) -> None:
+        for address in PLATE_ADDRESSES:
+            board_id = RELAY2.getID(address)
+            if "RELAYplate2" not in str(board_id):
+                raise RuntimeError(
+                    f"No se encontro una RELAYplate2 en address {address}: {board_id!r}"
+                )
+            state_mask = RELAY2.relaySTATE(address)
+            for relay in range(1, RELAYS_PER_PLATE + 1):
+                self.states[(address, relay)] = bool(
+                    state_mask & (1 << (relay - 1))
+                )
+
+    def _build_interface(self) -> None:
+        title = tk.Label(
+            self.root,
+            text="CONTROL DE RELAY PLATES",
+            font=("Arial", 20, "bold"),
+            fg="white",
+            bg="#111827",
+        )
+        title.pack(padx=24, pady=(20, 10))
+
+        plates_frame = tk.Frame(self.root, bg="#111827")
+        plates_frame.pack(padx=20, pady=10)
+
+        for column, address in enumerate(PLATE_ADDRESSES):
+            plate_frame = tk.LabelFrame(
+                plates_frame,
+                text=f"RELAYplate2 - Address {address}",
+                font=("Arial", 13, "bold"),
+                fg="white",
+                bg="#1f2937",
+                padx=12,
+                pady=12,
+            )
+            plate_frame.grid(row=0, column=column, padx=10, pady=5)
+
+            for relay in range(1, RELAYS_PER_PLATE + 1):
+                is_on = self.states[(address, relay)]
+                button = tk.Button(
+                    plate_frame,
+                    text=f"Relé {relay}\n{'ENCENDIDO' if is_on else 'APAGADO'}",
+                    width=15,
+                    height=3,
+                    font=("Arial", 11, "bold"),
+                    fg="white",
+                    bg=COLOR_ON if is_on else COLOR_OFF,
+                    activeforeground="white",
+                    activebackground=COLOR_ON if is_on else COLOR_OFF,
+                    command=lambda a=address, r=relay: self.toggle_relay(a, r),
+                )
+                button.grid(row=(relay - 1) // 2, column=(relay - 1) % 2, padx=6, pady=6)
+                self.buttons[(address, relay)] = button
+
+        self.status = tk.Label(
+            self.root,
+            text="Seleccione el relé que desea controlar.",
+            font=("Arial", 11),
+            fg="#d1d5db",
+            bg="#111827",
+        )
+        self.status.pack(pady=(5, 10))
+
+        all_off_button = tk.Button(
+            self.root,
+            text="APAGAR TODOS LOS RELÉS",
+            font=("Arial", 12, "bold"),
+            fg="white",
+            bg="#dc2626",
+            activebackground="#b91c1c",
+            activeforeground="white",
+            command=self.all_off,
+        )
+        all_off_button.pack(fill="x", padx=30, pady=(0, 20))
+
+    def toggle_relay(self, address: int, relay: int) -> None:
+        key = (address, relay)
+        new_state = not self.states[key]
+
+        try:
+            if new_state:
+                RELAY2.relayON(address, relay)
+            else:
+                RELAY2.relayOFF(address, relay)
+        except Exception as exc:
+            messagebox.showerror("Error de comunicación", str(exc))
+            return
+
+        self.states[key] = new_state
+        self._update_button(address, relay)
+        state_text = "encendido" if new_state else "apagado"
+        self.status.config(
+            text=f"Relé {relay} de address {address}: {state_text}."
         )
 
-    sequence = list(range(FIRST_RELAY, LAST_RELAY + 1)) + list(
-        range(LAST_RELAY - 1, FIRST_RELAY, -1)
-    )
+    def _update_button(self, address: int, relay: int) -> None:
+        state = self.states[(address, relay)]
+        self.buttons[(address, relay)].config(
+            text=f"Relé {relay}\n{'ENCENDIDO' if state else 'APAGADO'}",
+            bg=COLOR_ON if state else COLOR_OFF,
+            activebackground=COLOR_ON if state else COLOR_OFF,
+        )
 
-    RELAY2.relayALL(PLATE_ADDRESS, 0)
-    completed = 0
+    def all_off(self, show_error: bool = True) -> None:
+        try:
+            for address in PLATE_ADDRESSES:
+                RELAY2.relayALL(address, 0)
+        except Exception as exc:
+            if show_error:
+                messagebox.showerror("Error de comunicación", str(exc))
+            return
 
-    try:
-        while cycles == 0 or completed < cycles:
-            for relay in sequence:
-                RELAY2.relayON(PLATE_ADDRESS, relay)
-                print(f"\rRelay K{relay} encendido", end="", flush=True)
-                time.sleep(delay)
-                RELAY2.relayOFF(PLATE_ADDRESS, relay)
-            completed += 1
-    finally:
-        # Siempre deja todos los contactos abiertos al terminar.
-        RELAY2.relayALL(PLATE_ADDRESS, 0)
-        print("\nTodos los relays quedaron apagados.")
+        for key in self.states:
+            self.states[key] = False
+            self._update_button(*key)
+        self.status.config(text="Todos los relés están apagados.")
 
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Knight Rider en los 8 relays de la placa address 0."
-    )
-    parser.add_argument(
-        "--delay",
-        type=float,
-        default=0.20,
-        help="segundos que permanece encendido cada relay (default: 0.20)",
-    )
-    parser.add_argument(
-        "--cycles",
-        type=int,
-        default=0,
-        help="cantidad de ciclos; 0 significa continuo (default: 0)",
-    )
-    args = parser.parse_args()
-
-    if args.delay <= 0:
-        parser.error("--delay debe ser mayor que 0")
-    if args.cycles < 0:
-        parser.error("--cycles no puede ser negativo")
-    return args
+    def close(self) -> None:
+        self.all_off(show_error=False)
+        self.root.destroy()
 
 
 def main() -> None:
-    args = parse_args()
-    print(
-        f"RELAYplate2 address={PLATE_ADDRESS}, delay={args.delay}s. "
-        "Presiona Ctrl+C para detener."
-    )
+    root = tk.Tk()
     try:
-        knight_rider(args.delay, args.cycles)
-    except KeyboardInterrupt:
-        pass
+        RelayControlApp(root)
     except Exception as exc:
-        raise SystemExit(f"Error comunicando con la RELAYplate2: {exc}") from exc
+        root.withdraw()
+        messagebox.showerror("No se pudo iniciar", str(exc))
+        root.destroy()
+        return
+    root.mainloop()
 
 
 if __name__ == "__main__":
