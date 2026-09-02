@@ -141,7 +141,10 @@ def check_limit(
     retry_wait: int,
 ) -> float:
     print(f"ESTADO: VERIFICANDO {description}", flush=True)
-    print(f"CONDICIÓN PARA AVANZAR: {condition_text}", flush=True)
+    print("+----------------------------------------------------------+")
+    print("| CONDICIÓN REQUERIDA PARA AVANZAR")
+    print(f"| {condition_text}")
+    print("+----------------------------------------------------------+", flush=True)
     for attempt in range(1, cfg.MAX_SENSOR_CHECKS + 1):
         value = read_value()
         print(
@@ -150,10 +153,16 @@ def check_limit(
             flush=True,
         )
         if accepted(value):
-            print("CONDICIÓN CUMPLIDA -> avanzando al próximo paso.", flush=True)
+            print(
+                f"RESULTADO: CUMPLE ({condition_text}) -> avanzando.",
+                flush=True,
+            )
             return value
         else:
-            print("CONDICIÓN NO CUMPLIDA -> permanecer en este paso.", flush=True)
+            print(
+                f"RESULTADO: NO CUMPLE ({condition_text}) -> permanecer aquí.",
+                flush=True,
+            )
             wait_seconds(retry_wait, description)
     raise ProcessFault(f"Tiempo máximo excedido: {description}")
 
@@ -161,9 +170,12 @@ def check_limit(
 def verify_plates() -> None:
     for address in (cfg.RELAY_PLATE_1_ADDRESS, cfg.RELAY_PLATE_2_ADDRESS):
         board_id = RELAY2.getID(address)
+        condition = f"BOARD ID CONTAINS 'RELAYplate2' AT ADDRESS {address}"
+        print(f"CONDICIÓN REQUERIDA: {condition}")
         if "RELAYplate2" in str(board_id):
-            print(f"Relay Plate address {address}: DETECTADA ({board_id})")
+            print(f"RESULTADO: CUMPLE - placa detectada ({board_id})")
         else:
+            print(f"RESULTADO: NO CUMPLE - ID recibido: {board_id!r}")
             raise ProcessFault(f"RELAYplate2 no detectada en address {address}: {board_id!r}")
 
 
@@ -174,11 +186,15 @@ def all_relays_off() -> None:
 
 
 def run_sequence() -> None:
+    print("CONDICIÓN REQUERIDA: SIMULATE_SENSOR_DATA = True")
     if not cfg.SIMULATE_SENSOR_DATA:
+        print("RESULTADO: NO CUMPLE - lectura real no implementada")
         raise ProcessFault(
             "Las lecturas reales aún no están implementadas. Use "
             "SIMULATE_SENSOR_DATA = True."
         )
+    else:
+        print("RESULTADO: CUMPLE - se usarán valores simulados")
 
     sensors = SimulatedSensors()
     print("\n=== STARTUP PROCESS 2.0 ===")
@@ -189,20 +205,24 @@ def run_sequence() -> None:
     set_relay("Air Compressor", True)
     set_relay("Cooling Trap A", True)
     set_relay("Cooling Trap B", True)
-    check_limit(
-        "Air Pressure",
-        f"presión >= {cfg.MIN_AIR_PRESSURE_PSI:.1f} psi",
-        sensors.read_air_pressure,
-        lambda value: value >= cfg.MIN_AIR_PRESSURE_PSI,
-        "psi",
-        cfg.AIR_PRESSURE_RECHECK_SECONDS,
-    )
+    air_condition = f"AIR PRESSURE >= {cfg.MIN_AIR_PRESSURE_PSI:.1f} PSI"
+    air_pressure = sensors.read_air_pressure()
+    print(f"CONDICIÓN REQUERIDA: {air_condition}")
+    print(f"VALOR SIMULADO: AIR PRESSURE = {air_pressure:.1f} PSI")
+    if air_pressure >= cfg.MIN_AIR_PRESSURE_PSI:
+        print(f"RESULTADO: CUMPLE ({air_condition}) -> avanzando.")
+    else:
+        print(f"RESULTADO: NO CUMPLE ({air_condition}) -> FAULT.")
+        raise ProcessFault(
+            "Cooling System Failure: revisar compresor; no accionar válvulas "
+            "neumáticas sin suficiente presión de aire"
+        )
 
     show_step("2", "Water Chiller ON", "validar temperatura del tanque")
     print("Water Chiller: ON (control externo; sin relé asignado)")
     check_limit(
         "Water Tank Temperature",
-        f"temperatura <= {cfg.MAX_WATER_TANK_TEMPERATURE_C:.1f} °C",
+        f"WATER TANK TEMPERATURE <= {cfg.MAX_WATER_TANK_TEMPERATURE_C:.1f} °C",
         sensors.read_water_tank_temperature,
         lambda value: value <= cfg.MAX_WATER_TANK_TEMPERATURE_C,
         "°C",
@@ -213,7 +233,8 @@ def run_sequence() -> None:
     set_relay("Magnetic Booster Pump", True)
     check_limit(
         "Reactor Water Line Temperature",
-        f"temperatura <= {cfg.MAX_REACTOR_WATER_TEMPERATURE_C:.1f} °C",
+        f"REACTOR WATER LINE TEMPERATURE <= "
+        f"{cfg.MAX_REACTOR_WATER_TEMPERATURE_C:.1f} °C",
         sensors.read_reactor_water_temperature,
         lambda value: value <= cfg.MAX_REACTOR_WATER_TEMPERATURE_C,
         "°C",
@@ -234,7 +255,8 @@ def run_sequence() -> None:
 
     check_limit(
         "Mechanical Pump Temperature",
-        f"temperatura >= {cfg.MIN_MECHANICAL_PUMP_TEMPERATURE_C:.2f} °C",
+        f"MECHANICAL PUMP TEMPERATURE >= "
+        f"{cfg.MIN_MECHANICAL_PUMP_TEMPERATURE_C:.2f} °C",
         sensors.read_mechanical_pump_temperature,
         lambda value: value >= cfg.MIN_MECHANICAL_PUMP_TEMPERATURE_C,
         "°C",
@@ -242,7 +264,7 @@ def run_sequence() -> None:
     )
     check_limit(
         "Chamber Vacuum - roughing",
-        f"vacío <= {cfg.CROSSOVER_VACUUM_TORR:.3e} Torr",
+        f"CHAMBER VACUUM <= {cfg.CROSSOVER_VACUUM_TORR:.3e} TORR",
         sensors.read_chamber_pressure,
         lambda value: value <= cfg.CROSSOVER_VACUUM_TORR,
         "Torr",
@@ -252,12 +274,17 @@ def run_sequence() -> None:
     show_step("7", "Diffusion Pumps A & B ON", "alcanzar temperatura de operación")
     set_relay("Diffusion Pump A", True)
     set_relay("Diffusion Pump B", True)
-    print("ESTADO: CALENTANDO DIFFUSION PUMPS", flush=True)
-    print(
-        "CONDICIÓN PARA AVANZAR: "
-        f"A y B >= {cfg.MIN_DIFFUSION_PUMP_TEMPERATURE_C:.1f} °C",
-        flush=True,
+    diffusion_condition = (
+        "DIFFUSION PUMP A TEMPERATURE >= "
+        f"{cfg.MIN_DIFFUSION_PUMP_TEMPERATURE_C:.1f} °C AND "
+        "DIFFUSION PUMP B TEMPERATURE >= "
+        f"{cfg.MIN_DIFFUSION_PUMP_TEMPERATURE_C:.1f} °C"
     )
+    print("ESTADO: CALENTANDO DIFFUSION PUMPS", flush=True)
+    print("+----------------------------------------------------------+")
+    print("| CONDICIÓN REQUERIDA PARA AVANZAR")
+    print(f"| {diffusion_condition}")
+    print("+----------------------------------------------------------+", flush=True)
     for attempt in range(1, cfg.MAX_SENSOR_CHECKS + 1):
         temp_a, temp_b = sensors.read_diffusion_temperatures()
         print(
@@ -268,10 +295,13 @@ def run_sequence() -> None:
             temp_a >= cfg.MIN_DIFFUSION_PUMP_TEMPERATURE_C
             and temp_b >= cfg.MIN_DIFFUSION_PUMP_TEMPERATURE_C
         ):
-            print("CONDICIÓN CUMPLIDA -> avanzando al próximo paso.")
+            print(f"RESULTADO: CUMPLE ({diffusion_condition}) -> avanzando.")
             break
         else:
-            print("CONDICIÓN NO CUMPLIDA -> continuar calentando.")
+            print(
+                f"RESULTADO: NO CUMPLE ({diffusion_condition}) -> "
+                "continuar calentando."
+            )
             wait_seconds(
                 cfg.DIFFUSION_TEMPERATURE_RECHECK_SECONDS,
                 "calentamiento diffusion pumps",
@@ -281,7 +311,7 @@ def run_sequence() -> None:
 
     check_limit(
         "Chamber Vacuum - comprobación final",
-        f"vacío <= {cfg.CROSSOVER_VACUUM_TORR:.3e} Torr",
+        f"CHAMBER VACUUM <= {cfg.CROSSOVER_VACUUM_TORR:.3e} TORR",
         lambda: sensors.read_chamber_pressure(diffusion=True),
         lambda value: value <= cfg.CROSSOVER_VACUUM_TORR,
         "Torr",
@@ -291,18 +321,22 @@ def run_sequence() -> None:
     show_step("8", "Chamber Valves A & B CLOSE", "confirmar cierre")
     set_relay("Chamber Valve A", False)
     set_relay("Chamber Valve B", False)
+    print("CONDICIÓN REQUERIDA: CHAMBER VALVE A = OFF AND B = OFF")
     if not relay_is_on("Chamber Valve A") and not relay_is_on("Chamber Valve B"):
-        print("CONDICIÓN CUMPLIDA: Chamber Valves A & B están cerradas.")
+        print("RESULTADO: CUMPLE - Chamber Valves A & B están cerradas.")
     else:
+        print("RESULTADO: NO CUMPLE - revisar cierre de Chamber Valves A & B.")
         raise ProcessFault("Chamber valves no confirmaron estado cerrado")
 
     show_step("9", "Gate Valves A & B OPEN", "confirmar apertura")
     set_relay("Gate Valve A", True)
     set_relay("Gate Valve B", True)
     wait_seconds(cfg.VALVE_SEAT_WAIT_SECONDS, "confirmar apertura de gate valves")
+    print("CONDICIÓN REQUERIDA: GATE VALVE A = ON AND B = ON")
     if relay_is_on("Gate Valve A") and relay_is_on("Gate Valve B"):
-        print("CONDICIÓN CUMPLIDA: Gate Valves A & B están abiertas.")
+        print("RESULTADO: CUMPLE - Gate Valves A & B están abiertas.")
     else:
+        print("RESULTADO: NO CUMPLE - ejecutando interlock de Gate Valves.")
         set_relay("Gate Valve A", False)
         set_relay("Gate Valve B", False)
         raise ProcessFault("Gate valve failed to open; revisar actuador neumático")
