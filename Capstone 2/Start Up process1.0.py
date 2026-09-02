@@ -18,7 +18,6 @@ except ImportError as exc:
 
 WAIT_TWO_MINUTES = 10
 SIMULATION_SECONDS = 15
-RELAY_SWITCH_DELAY = 2
 
 # (address, relay). Cada salida puede cambiarse aquí si cambia el cableado.
 RELAYS = {
@@ -45,12 +44,11 @@ def set_relay(name: str, on: bool) -> None:
     """Cambia un relé y muestra su estado en el terminal."""
     address, relay = RELAYS[name]
     target_state = "ON / ENCENDIDO" if on else "OFF / APAGADO"
-    print(
+    input(
+        "\n"
         f"[Address {address} | Relé {relay}] {name}: "
-        f"MOVIENDO A {target_state}...",
-        flush=True,
+        f"LISTO PARA CAMBIAR A {target_state}. Presione ENTER: "
     )
-    time.sleep(RELAY_SWITCH_DELAY)
 
     if on:
         RELAY2.relayON(address, relay)
@@ -148,8 +146,6 @@ def restore_relay_states(states: dict[int, int]) -> None:
     """Devuelve ambas placas exactamente a su estado inicial."""
     print("\nRestaurando el estado original de los relés...", flush=True)
     for address in (0, 1):
-        print(f"Relay Plate address {address}: MOVIENDO AL ESTADO ORIGINAL...", flush=True)
-        time.sleep(RELAY_SWITCH_DELAY)
         RELAY2.relayALL(address, states[address])
         print(
             f"Relay Plate address {address}: ESTADO ORIGINAL RESTAURADO "

@@ -36,9 +36,9 @@ programa en el sistema real.
 
 ## Tiempos
 
-- Antes de cada cambio, el terminal indica `MOVIENDO A ON/OFF`, espera 2
-  segundos y después acciona el relé. `RELAY_SWITCH_DELAY` permite cambiar
-  esta demora.
+- Antes de cada acción de la secuencia, el terminal identifica el equipo, el
+  address, el relé y el estado solicitado. El relé no cambia hasta que el
+  operador presiona `ENTER`.
 - Después de encender el water level solenoid: espera configurada actualmente
   en 10 segundos.
 - Después de encender el water chiller y antes del magnetic booster pump:
@@ -82,7 +82,8 @@ la presión”. No tiene un relé asignado porque los 16 relés ya están asigna
 Por cada acción real aparece una línea con este formato:
 
 ```text
-[Address 0 | Relé 1] air_compressor: MOVIENDO A ON / ENCENDIDO...
+[Address 0 | Relé 1] air_compressor: LISTO PARA CAMBIAR A ON / ENCENDIDO.
+Presione ENTER:
 [Address 0 | Relé 1] air_compressor: ON / ENCENDIDO
 ```
 
