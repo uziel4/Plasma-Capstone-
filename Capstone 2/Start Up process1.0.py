@@ -190,9 +190,12 @@ def run_startup(original_states: dict[int, int]) -> bool:
     print("\nPASO 2 - Air compressor")
     set_relay("air_compressor", True)
 
-    print("\nPASO 3 - Water level solenoid")
-    set_relay("water_level_solenoid", True)
-    wait_with_status(WATER_FILL_WAIT_SECONDS, "llenado de agua")
+    # PASO 3 FUERA DE SERVICIO - Water level solenoid
+    # Para reactivarlo, quite el comentario de las siguientes tres líneas:
+    # print("\nPASO 3 - Water level solenoid")
+    # set_relay("water_level_solenoid", True)
+    # wait_with_status(WATER_FILL_WAIT_SECONDS, "llenado de agua")
+    print("\nPASO 3 - Water level solenoid: FUERA DE SERVICIO / OMITIDO")
 
     print("\nPASO 4 - Water chiller")
     set_relay("water_chiller", True)

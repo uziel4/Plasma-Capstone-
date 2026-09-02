@@ -13,7 +13,7 @@
 | Paso | Address | Relé | Equipo | Acción |
 |---:|---:|---:|---|---|
 | 2 | 0 | 1 | Air compressor | ON |
-| 3 | 0 | 2 | Water level solenoid | ON |
+| 3 | 0 | 2 | Water level solenoid | FUERA DE SERVICIO / OMITIDO |
 | 4 | 0 | 3 | Water chiller | ON |
 | 5 | 0 | 4 | Magnetic booster pump | ON |
 | 6 | 0 | 5 | Cooling trap A | ON |
@@ -33,6 +33,10 @@
 
 Esta asignación debe compararse con el cableado físico antes de ejecutar el
 programa en el sistema real.
+
+El paso 3 está comentado en el programa. Actualmente no acciona el relé del
+water level solenoid ni ejecuta la espera de llenado. Las líneas permanecen en
+el archivo para poder reactivarlas retirando sus comentarios.
 
 ## Tiempos
 
