@@ -18,6 +18,7 @@ except ImportError as exc:
 
 WAIT_TWO_MINUTES = 10
 SIMULATION_SECONDS = 15
+RELAY_SWITCH_DELAY = 2
 
 # (address, relay). Cada salida puede cambiarse aquí si cambia el cableado.
 RELAYS = {
@@ -43,13 +44,23 @@ RELAYS = {
 def set_relay(name: str, on: bool) -> None:
     """Cambia un relé y muestra su estado en el terminal."""
     address, relay = RELAYS[name]
+    target_state = "ON / ENCENDIDO" if on else "OFF / APAGADO"
+    print(
+        f"[Address {address} | Relé {relay}] {name}: "
+        f"MOVIENDO A {target_state}...",
+        flush=True,
+    )
+    time.sleep(RELAY_SWITCH_DELAY)
+
     if on:
         RELAY2.relayON(address, relay)
     else:
         RELAY2.relayOFF(address, relay)
 
-    state = "ON / ENCENDIDO" if on else "OFF / APAGADO"
-    print(f"[Address {address} | Relé {relay}] {name}: {state}", flush=True)
+    print(
+        f"[Address {address} | Relé {relay}] {name}: {target_state}",
+        flush=True,
+    )
 
 
 def wait_with_status(seconds: int, reason: str) -> None:
@@ -126,12 +137,33 @@ def all_relays_off() -> None:
     print("Todos los relés están OFF / APAGADOS.", flush=True)
 
 
-def run_startup() -> None:
-    print("\n=== START UP PROCESS 1.0 ===")
-    verify_relay_plates()
+def capture_relay_states() -> dict[int, int]:
+    """Guarda la máscara inicial de los ocho relés de cada placa."""
+    states = {address: RELAY2.relaySTATE(address) for address in (0, 1)}
+    print("Estado original de los 16 relés guardado.", flush=True)
+    return states
 
-    input("Revise el sistema. Presione ENTER para iniciar la secuencia: ")
+
+def restore_relay_states(states: dict[int, int]) -> None:
+    """Devuelve ambas placas exactamente a su estado inicial."""
+    print("\nRestaurando el estado original de los relés...", flush=True)
+    for address in (0, 1):
+        print(f"Relay Plate address {address}: MOVIENDO AL ESTADO ORIGINAL...", flush=True)
+        time.sleep(RELAY_SWITCH_DELAY)
+        RELAY2.relayALL(address, states[address])
+        print(
+            f"Relay Plate address {address}: ESTADO ORIGINAL RESTAURADO "
+            f"(máscara {states[address]:08b})",
+            flush=True,
+        )
+
+
+def run_startup(original_states: dict[int, int]) -> bool:
+    """Ejecuta un ciclo y devuelve True si el operador desea repetirlo."""
+    print("\n=== START UP PROCESS 1.0 ===")
+    print("Preparando inicio seguro: apagando los 16 relés...", flush=True)
     all_relays_off()
+    input("Todos los relés están apagados. Presione ENTER para iniciar: ")
 
     print("\nPASO 2 - Air compressor")
     set_relay("air_compressor", True)
@@ -185,10 +217,26 @@ def run_startup() -> None:
     print("Inyecte el gas deseado y regule la presión.", flush=True)
     print("\n=== START UP COMPLETADO ===", flush=True)
 
+    answer = input(
+        "Escriba SI para repetir la secuencia o presione ENTER para "
+        "restaurar el estado original y finalizar: "
+    ).strip().lower()
+    if answer in {"si", "sí"}:
+        print("\nLa secuencia se repetirá desde el comienzo.", flush=True)
+        return True
+
+    restore_relay_states(original_states)
+    print("\n=== ESTADO ORIGINAL RESTAURADO ===", flush=True)
+    return False
+
 
 def main() -> None:
     try:
-        run_startup()
+        verify_relay_plates()
+        original_states = capture_relay_states()
+        repeat = True
+        while repeat:
+            repeat = run_startup(original_states)
     except KeyboardInterrupt:
         print("\nSecuencia interrumpida por el operador.", flush=True)
         print(

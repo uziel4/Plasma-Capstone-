@@ -36,12 +36,23 @@ programa en el sistema real.
 
 ## Tiempos
 
-- Después de encender el water level solenoid: espera real de 120 segundos.
+- Antes de cada cambio, el terminal indica `MOVIENDO A ON/OFF`, espera 2
+  segundos y después acciona el relé. `RELAY_SWITCH_DELAY` permite cambiar
+  esta demora.
+- Después de encender el water level solenoid: espera configurada actualmente
+  en 10 segundos.
 - Después de encender el water chiller y antes del magnetic booster pump:
-  espera real de 120 segundos.
+  espera configurada actualmente en 10 segundos.
 - Durante cada espera aparece una cuenta regresiva en el terminal.
 - `WAIT_TWO_MINUTES` permite cambiar las esperas reales.
 - `SIMULATION_SECONDS` permite cambiar la duración visual de las simulaciones.
+
+## Estado antes de comenzar
+
+Al abrir el programa, primero se guarda el estado original y acto seguido se
+apagan los 16 relés. El programa no solicita el `ENTER` de inicio hasta que las
+dos Relay Plates han recibido la orden de apagado. Cada repetición vuelve a
+apagar todos los relés antes de comenzar el primer paso.
 
 ## Pasos simulados
 
@@ -71,6 +82,7 @@ la presión”. No tiene un relé asignado porque los 16 relés ya están asigna
 Por cada acción real aparece una línea con este formato:
 
 ```text
+[Address 0 | Relé 1] air_compressor: MOVIENDO A ON / ENCENDIDO...
 [Address 0 | Relé 1] air_compressor: ON / ENCENDIDO
 ```
 
@@ -81,6 +93,19 @@ los errores de comunicación y el aviso de finalización de la secuencia.
 
 Si se presiona `Ctrl+C`, la secuencia se detiene, pero los relés conservan su
 estado actual. El operador debe revisar el sistema antes de salir.
+
+## Restauración al finalizar
+
+Antes de iniciar, el programa lee y guarda el estado original de los 16 relés.
+Cuando completa el paso 16, pregunta si el operador quiere repetir la secuencia:
+
+- Escribir `SI` vuelve a ejecutar todos los pasos desde el comienzo.
+- Presionar solamente `ENTER` restaura las dos Relay Plates exactamente a sus
+  estados originales y finaliza el programa.
+
+El estado inicial se guarda una sola vez, por lo que se conserva aunque la
+secuencia se repita varias veces. La restauración final no ocurre si el programa
+es interrumpido con `Ctrl+C`.
 
 ## Ejecución
 
