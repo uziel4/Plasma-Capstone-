@@ -74,9 +74,10 @@ apagar todos los relés antes de comenzar el primer paso.
 
 ### Paso 11 — Presión
 
-No lee la ADCplate. El terminal muestra una presión ficticia descendiendo desde
-760,000 milliTorr hasta 15 milliTorr durante 15 segundos. Al terminar informa
-que alcanzó de forma simulada el rango solicitado de 30–1 milliTorr.
+No lee la ADCplate. El terminal muestra en notación científica una presión
+ficticia descendiendo desde `7.600e+02 Torr` hasta `1.500e-02 Torr` durante 15
+segundos. Al terminar informa que alcanzó de forma simulada el rango solicitado
+de `3.000e-02–1.000e-03 Torr`.
 
 ### Paso 13 — Temperaturas
 

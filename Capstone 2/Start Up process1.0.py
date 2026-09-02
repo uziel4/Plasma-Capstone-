@@ -80,22 +80,25 @@ def wait_with_status(seconds: int, reason: str) -> None:
 
 
 def simulate_pressure() -> None:
-    """Simula en pantalla el descenso hasta 15 milliTorr."""
-    initial_mtorr = 760_000.0
-    target_mtorr = 15.0
+    """Simula en pantalla el descenso hasta 1.5e-2 Torr."""
+    initial_torr = 760.0
+    target_torr = 1.5e-2
     print("\n[SIMULACIÓN - SIN DATOS DEL ADC] Alcanzando vacío...", flush=True)
     for second in range(SIMULATION_SECONDS + 1):
         progress = second / SIMULATION_SECONDS
-        pressure = initial_mtorr * (target_mtorr / initial_mtorr) ** progress
+        pressure = initial_torr * (target_torr / initial_torr) ** progress
         print(
-            f"\rPresión simulada: {pressure:,.2f} milliTorr "
+            f"\rPresión simulada: {pressure:.3e} Torr "
             f"| {second:02d}/{SIMULATION_SECONDS:02d} s",
             end="",
             flush=True,
         )
         if second < SIMULATION_SECONDS:
             time.sleep(1)
-    print("\nRango simulado alcanzado: 30–1 milliTorr.", flush=True)
+    print(
+        "\nRango simulado alcanzado: 3.000e-02–1.000e-03 Torr.",
+        flush=True,
+    )
 
 
 def simulate_temperature() -> None:
