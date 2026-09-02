@@ -18,6 +18,7 @@ except ImportError as exc:
 
 WAIT_TWO_MINUTES = 10
 SIMULATION_SECONDS = 15
+AUTOMATIC_MODE = False
 
 # (address, relay). Cada salida puede cambiarse aquí si cambia el cableado.
 RELAYS = {
@@ -44,11 +45,14 @@ def set_relay(name: str, on: bool) -> None:
     """Cambia un relé y muestra su estado en el terminal."""
     address, relay = RELAYS[name]
     target_state = "ON / ENCENDIDO" if on else "OFF / APAGADO"
-    input(
-        "\n"
+    message = (
         f"[Address {address} | Relé {relay}] {name}: "
-        f"LISTO PARA CAMBIAR A {target_state}. Presione ENTER: "
+        f"LISTO PARA CAMBIAR A {target_state}."
     )
+    if AUTOMATIC_MODE:
+        print(f"\n{message} MODO AUTOMÁTICO.", flush=True)
+    else:
+        input(f"\n{message} Presione ENTER: ")
 
     if on:
         RELAY2.relayON(address, relay)
@@ -159,7 +163,10 @@ def run_startup(original_states: dict[int, int]) -> bool:
     print("\n=== START UP PROCESS 1.0 ===")
     print("Preparando inicio seguro: apagando los 16 relés...", flush=True)
     all_relays_off()
-    input("Todos los relés están apagados. Presione ENTER para iniciar: ")
+    if AUTOMATIC_MODE:
+        print("MODO AUTOMÁTICO: iniciando la secuencia.", flush=True)
+    else:
+        input("Todos los relés están apagados. Presione ENTER para iniciar: ")
 
     print("\nPASO 2 - Air compressor")
     set_relay("air_compressor", True)
@@ -212,6 +219,12 @@ def run_startup(original_states: dict[int, int]) -> bool:
     print("\nPASO 16 - Inyección de gas")
     print("Inyecte el gas deseado y regule la presión.", flush=True)
     print("\n=== START UP COMPLETADO ===", flush=True)
+
+    if AUTOMATIC_MODE:
+        print("MODO AUTOMÁTICO: restaurando el estado original.", flush=True)
+        restore_relay_states(original_states)
+        print("\n=== ESTADO ORIGINAL RESTAURADO ===", flush=True)
+        return False
 
     answer = input(
         "Escriba SI para repetir la secuencia o presione ENTER para "

@@ -47,6 +47,22 @@ programa en el sistema real.
 - `WAIT_TWO_MINUTES` permite cambiar las esperas reales.
 - `SIMULATION_SECONDS` permite cambiar la duración visual de las simulaciones.
 
+## Modo manual o automático
+
+La variable al comienzo del programa controla el modo de operación:
+
+```python
+AUTOMATIC_MODE = False
+```
+
+- `False`: solicita `ENTER` antes de iniciar y antes de cada cambio de relé;
+  al final permite repetir la secuencia.
+- `True`: inicia y cambia todos los relés sin solicitar `ENTER`; al completar
+  una ejecución restaura automáticamente el estado original y termina.
+
+En ambos modos se mantienen las esperas, las cuentas regresivas y los pasos
+simulados de presión y temperatura.
+
 ## Estado antes de comenzar
 
 Al abrir el programa, primero se guarda el estado original y acto seguido se
