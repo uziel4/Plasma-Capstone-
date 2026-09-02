@@ -182,7 +182,20 @@ def verify_plates() -> None:
 def all_relays_off() -> None:
     RELAY2.relayALL(cfg.RELAY_PLATE_1_ADDRESS, 0)
     RELAY2.relayALL(cfg.RELAY_PLATE_2_ADDRESS, 0)
-    print("Estado inicial: los 16 relés están OFF.", flush=True)
+    print("ESTADO DE SEGURIDAD: los 16 relés están OFF.", flush=True)
+
+
+def ask_to_repeat() -> bool:
+    answer = input(
+        "\nEscriba SI para repetir la simulación o presione ENTER "
+        "para terminar: "
+    ).strip().lower()
+    if answer in {"si", "sí"}:
+        print("RESULTADO: se repetirá la simulación completa.", flush=True)
+        return True
+    else:
+        print("RESULTADO: simulación finalizada; relés permanecen OFF.", flush=True)
+        return False
 
 
 def run_sequence() -> None:
@@ -358,16 +371,27 @@ def run_sequence() -> None:
 def main() -> None:
     try:
         verify_plates()
-        all_relays_off()
-        pause_for_operator("Sistema preparado para comenzar.")
-        run_sequence()
+        repeat = True
+        while repeat:
+            all_relays_off()
+            pause_for_operator("Sistema preparado para comenzar.")
+            run_sequence()
+            print("\nApagando todos los relés al terminar la simulación...")
+            all_relays_off()
+            repeat = ask_to_repeat()
     except KeyboardInterrupt:
         print("\nSecuencia interrumpida por el operador.", flush=True)
+        all_relays_off()
     except ProcessFault as exc:
         print(f"\n⚠ FAULT: {exc}", flush=True)
+        all_relays_off()
         raise SystemExit(1) from exc
     except Exception as exc:
         print(f"\nERROR DE HARDWARE: {exc}", flush=True)
+        try:
+            all_relays_off()
+        except Exception:
+            print("No fue posible confirmar el apagado de los relés.", flush=True)
         raise SystemExit(1) from exc
 
 
