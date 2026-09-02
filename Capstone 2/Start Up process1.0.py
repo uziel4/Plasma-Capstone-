@@ -16,9 +16,19 @@ except ImportError as exc:
     ) from exc
 
 
-WAIT_TWO_MINUTES = 10
-SIMULATION_SECONDS = 15
+# Configuración del proceso. Todos los tiempos están expresados en segundos.
 AUTOMATIC_MODE = False
+WATER_FILL_WAIT_SECONDS = 10
+CHILLER_WAIT_SECONDS = 10
+PRESSURE_SIMULATION_SECONDS = 15
+TEMPERATURE_SIMULATION_SECONDS = 15
+
+# Objetivos simulados. Sustituir por lecturas reales cuando se conecten sensores.
+INITIAL_PRESSURE_TORR = 760.0
+TARGET_VACUUM_TORR = 1.5e-2
+INITIAL_TEMPERATURE_F = 75.0
+TARGET_TEMPERATURE_A_F = 275.0
+TARGET_TEMPERATURE_B_F = 272.0
 
 # (address, relay). Cada salida puede cambiarse aquí si cambia el cableado.
 RELAYS = {
@@ -80,49 +90,55 @@ def wait_with_status(seconds: int, reason: str) -> None:
 
 
 def simulate_pressure() -> None:
-    """Simula en pantalla el descenso hasta 1.5e-2 Torr."""
-    initial_torr = 760.0
-    target_torr = 1.5e-2
+    """Simula el descenso hasta el vacío definido en TARGET_VACUUM_TORR."""
     print("\n[SIMULACIÓN - SIN DATOS DEL ADC] Alcanzando vacío...", flush=True)
-    for second in range(SIMULATION_SECONDS + 1):
-        progress = second / SIMULATION_SECONDS
-        pressure = initial_torr * (target_torr / initial_torr) ** progress
+    for second in range(PRESSURE_SIMULATION_SECONDS + 1):
+        progress = second / PRESSURE_SIMULATION_SECONDS
+        pressure = INITIAL_PRESSURE_TORR * (
+            TARGET_VACUUM_TORR / INITIAL_PRESSURE_TORR
+        ) ** progress
         print(
             f"\rPresión simulada: {pressure:.3e} Torr "
-            f"| {second:02d}/{SIMULATION_SECONDS:02d} s",
+            f"| {second:02d}/{PRESSURE_SIMULATION_SECONDS:02d} s",
             end="",
             flush=True,
         )
-        if second < SIMULATION_SECONDS:
+        if second < PRESSURE_SIMULATION_SECONDS:
             time.sleep(1)
     print(
-        "\nRango simulado alcanzado: 3.000e-02–1.000e-03 Torr.",
+        f"\nVacío simulado alcanzado: {TARGET_VACUUM_TORR:.3e} Torr.",
         flush=True,
     )
 
 
 def simulate_temperature() -> None:
     """Simula en pantalla el calentamiento de ambas diffusion pumps."""
-    initial_f = 75.0
-    target_a_f = 275.0
-    target_b_f = 272.0
     print(
         "\n[SIMULACIÓN - SIN DATOS DEL THERMO] Calentando diffusion pumps...",
         flush=True,
     )
-    for second in range(SIMULATION_SECONDS + 1):
-        progress = second / SIMULATION_SECONDS
-        temp_a = initial_f + (target_a_f - initial_f) * progress
-        temp_b = initial_f + (target_b_f - initial_f) * progress
+    for second in range(TEMPERATURE_SIMULATION_SECONDS + 1):
+        progress = second / TEMPERATURE_SIMULATION_SECONDS
+        temp_a = INITIAL_TEMPERATURE_F + (
+            TARGET_TEMPERATURE_A_F - INITIAL_TEMPERATURE_F
+        ) * progress
+        temp_b = INITIAL_TEMPERATURE_F + (
+            TARGET_TEMPERATURE_B_F - INITIAL_TEMPERATURE_F
+        ) * progress
         print(
             f"\rTemp. A: {temp_a:6.1f} °F | Temp. B: {temp_b:6.1f} °F "
-            f"| {second:02d}/{SIMULATION_SECONDS:02d} s",
+            f"| {second:02d}/{TEMPERATURE_SIMULATION_SECONDS:02d} s",
             end="",
             flush=True,
         )
-        if second < SIMULATION_SECONDS:
+        if second < TEMPERATURE_SIMULATION_SECONDS:
             time.sleep(1)
-    print("\nRango simulado alcanzado: 250–300 °F.", flush=True)
+    print(
+        f"\nTemperaturas simuladas alcanzadas: "
+        f"A={TARGET_TEMPERATURE_A_F:.1f} °F, "
+        f"B={TARGET_TEMPERATURE_B_F:.1f} °F.",
+        flush=True,
+    )
 
 
 def verify_relay_plates() -> None:
@@ -176,13 +192,13 @@ def run_startup(original_states: dict[int, int]) -> bool:
 
     print("\nPASO 3 - Water level solenoid")
     set_relay("water_level_solenoid", True)
-    wait_with_status(WAIT_TWO_MINUTES, "llenado de agua")
+    wait_with_status(WATER_FILL_WAIT_SECONDS, "llenado de agua")
 
     print("\nPASO 4 - Water chiller")
     set_relay("water_chiller", True)
 
     print("\nPASO 5 - Magnetic booster pump")
-    wait_with_status(WAIT_TWO_MINUTES, "antes de encender el booster pump")
+    wait_with_status(CHILLER_WAIT_SECONDS, "antes de encender el booster pump")
     set_relay("magnetic_booster_pump", True)
 
     print("\nPASO 6 - Cooling traps A & B")

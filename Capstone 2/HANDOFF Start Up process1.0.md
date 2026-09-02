@@ -39,13 +39,23 @@ programa en el sistema real.
 - Antes de cada acción de la secuencia, el terminal identifica el equipo, el
   address, el relé y el estado solicitado. El relé no cambia hasta que el
   operador presiona `ENTER`.
-- Después de encender el water level solenoid: espera configurada actualmente
-  en 10 segundos.
-- Después de encender el water chiller y antes del magnetic booster pump:
-  espera configurada actualmente en 10 segundos.
+- `WATER_FILL_WAIT_SECONDS`: espera después de encender el water level
+  solenoid; actualmente 10 segundos.
+- `CHILLER_WAIT_SECONDS`: espera después de encender el water chiller y antes
+  del magnetic booster pump; actualmente 10 segundos.
+- `PRESSURE_SIMULATION_SECONDS`: duración de la simulación de vacío;
+  actualmente 15 segundos.
+- `TEMPERATURE_SIMULATION_SECONDS`: duración de la simulación de temperatura;
+  actualmente 15 segundos.
 - Durante cada espera aparece una cuenta regresiva en el terminal.
-- `WAIT_TWO_MINUTES` permite cambiar las esperas reales.
-- `SIMULATION_SECONDS` permite cambiar la duración visual de las simulaciones.
+
+Los objetivos simulados también se cambian al principio del archivo:
+
+- `INITIAL_PRESSURE_TORR`: presión inicial de la simulación.
+- `TARGET_VACUUM_TORR`: vacío único que debe alcanzar la simulación.
+- `INITIAL_TEMPERATURE_F`: temperatura inicial simulada.
+- `TARGET_TEMPERATURE_A_F`: temperatura objetivo de la diffusion pump A.
+- `TARGET_TEMPERATURE_B_F`: temperatura objetivo de la diffusion pump B.
 
 ## Modo manual o automático
 
@@ -75,9 +85,9 @@ apagar todos los relés antes de comenzar el primer paso.
 ### Paso 11 — Presión
 
 No lee la ADCplate. El terminal muestra en notación científica una presión
-ficticia descendiendo desde `7.600e+02 Torr` hasta `1.500e-02 Torr` durante 15
-segundos. Al terminar informa que alcanzó de forma simulada el rango solicitado
-de `3.000e-02–1.000e-03 Torr`.
+ficticia descendiendo desde `INITIAL_PRESSURE_TORR` hasta el vacío único
+definido en `TARGET_VACUUM_TORR`. Con la configuración actual desciende desde
+`7.600e+02 Torr` hasta `1.500e-02 Torr` durante 15 segundos.
 
 ### Paso 13 — Temperaturas
 
