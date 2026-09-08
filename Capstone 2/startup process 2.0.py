@@ -43,7 +43,7 @@ class ProcessFault(RuntimeError):
 class SimulatedSensors:
     def __init__(self) -> None:
         self.air_psi = cfg.SIM_INITIAL_AIR_PRESSURE_PSI
-        self.water_tank_c = cfg.SIM_INITIAL_WATER_TANK_TEMPERATURE_C
+        self.water_line_c = cfg.SIM_INITIAL_WATER_LINE_TEMPERATURE_C
         self.reactor_water_c = cfg.SIM_INITIAL_REACTOR_WATER_TEMPERATURE_C
         self.mechanical_pump_c = cfg.SIM_INITIAL_MECHANICAL_PUMP_TEMPERATURE_C
         self.chamber_torr = cfg.SIM_INITIAL_CHAMBER_PRESSURE_TORR
@@ -54,12 +54,12 @@ class SimulatedSensors:
         self.air_psi += cfg.SIM_AIR_PRESSURE_STEP_PSI
         return self.air_psi
 
-    def read_water_tank_temperature(self) -> float:
-        self.water_tank_c = max(
-            cfg.MAX_WATER_TANK_TEMPERATURE_C,
-            self.water_tank_c - cfg.SIM_WATER_TANK_COOLING_STEP_C,
+    def read_water_line_temperature(self) -> float:
+        self.water_line_c = max(
+            cfg.MAX_WATER_LINE_TEMPERATURE_C,
+            self.water_line_c - cfg.SIM_WATER_LINE_COOLING_STEP_C,
         )
-        return self.water_tank_c
+        return self.water_line_c
 
     def read_reactor_water_temperature(self) -> float:
         self.reactor_water_c = max(
@@ -234,12 +234,12 @@ def run_sequence() -> None:
     show_step("2", "Water Chiller ON", "validar temperatura del tanque")
     print("Water Chiller: ON (control externo; sin relé asignado)")
     check_limit(
-        "Water Tank Temperature",
-        f"WATER TANK TEMPERATURE <= {cfg.MAX_WATER_TANK_TEMPERATURE_C:.1f} °C",
-        sensors.read_water_tank_temperature,
-        lambda value: value <= cfg.MAX_WATER_TANK_TEMPERATURE_C,
+        "Water Line Temperature",
+        f"WATER LINE TEMPERATURE <= {cfg.MAX_WATER_LINE_TEMPERATURE_C:.1f} °C",
+        sensors.read_water_line_temperature,
+        lambda value: value <= cfg.MAX_WATER_LINE_TEMPERATURE_C,
         "°C",
-        cfg.WATER_TANK_RECHECK_SECONDS,
+        cfg.WATER_LINE_RECHECK_SECONDS,
     )
     wait_seconds(cfg.BOOSTER_DELAY_SECONDS, "tiempo mínimo antes del booster")
     show_step("3", "Magnetic Booster Pump ON", "validar línea de agua")
