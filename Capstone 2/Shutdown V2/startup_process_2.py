@@ -196,7 +196,6 @@ def run_sequence() -> None:
     sensors = SimulatedSensors()
     print("\n=== STARTUP PROCESS 2.0 ===")
     print("SENSORES: MODO SIMULADO - NO SE RECOLECTAN DATOS DE ADC/THERMO")
-    print("Water Level Solenoid: EXCLUIDO / NO SE ACCIONA")
 
     show_step("1", "Air Compressor y Cooling Traps ON", "validar presión de aire")
     set_relay("Air Compressor", True)
@@ -338,17 +337,6 @@ def run_sequence() -> None:
         set_relay("Gate Valve B", False)
         raise ProcessFault("Gate valve failed to open; revisar actuador neumático")
 
-    show_step("10", "Gas y sistema de microondas", "estado operacional")
-    pause_for_operator("Inyecte el gas de proceso y regule la presión.")
-    set_relay("Microwave Cooling", True)
-    pause_for_operator(
-        f"Encienda Power Supply y ajuste aproximadamente {cfg.POWER_SUPPLY_CURRENT_AMPS:.0f} A."
-    )
-    pause_for_operator("Encienda Microwave Source.")
-    pause_for_operator("Espere la luz verde READY y presione ON.")
-    pause_for_operator(
-        f"Ajuste Microwave Power a {cfg.MICROWAVE_POWER_LEVEL_PERCENT:.1f} %."
-    )
     print("\n=== SEQUENCE COMPLETE - SYSTEM OPERATIONAL ===", flush=True)
 
 
@@ -361,7 +349,7 @@ def main() -> None:
             pause_for_operator("Sistema preparado para comenzar.")
             run_sequence()
             print("\nApagando todos los relés al terminar la simulación...")
-            all_relays_off()
+            #all_relays_off()
             repeat = ask_to_repeat()
     except KeyboardInterrupt:
         print("\nSecuencia interrumpida por el operador.", flush=True)

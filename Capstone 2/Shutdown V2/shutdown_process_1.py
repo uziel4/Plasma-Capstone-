@@ -84,11 +84,15 @@ def run_shutdown_sequence() -> None:
 
     show_step("6", "Switch to OFF position the gate valves A & B")
     set_relay("Gate Valve A", False)
+    time.sleep(5)
     set_relay("Gate Valve B", False)
+    time.sleep(5)
 
     show_step("7", "Switch to OFF position the diffusion pumps A & B")
     set_relay("Diffusion Pump A", False)
+    time.sleep(5)
     set_relay("Diffusion Pump B", False)
+    time.sleep(5)
 
     show_step("12", "Wait until the diffusion pumps reach <= 100 °F (37.78 °C)")
     cooling_condition = f"TEMP A <= {cfg.MAX_SAFE_DIFFUSION_TEMP_C:.2f} °C AND TEMP B <= {cfg.MAX_SAFE_DIFFUSION_TEMP_C:.2f} °C"
@@ -108,27 +112,30 @@ def run_shutdown_sequence() -> None:
 
     show_step("9", "Switch to OFF position the diffuse valves A & B")
     set_relay("Diffuse Valve A", False)
+    time.sleep(5)
     set_relay("Diffuse Valve B", False)
+    time.sleep(5)
 
     show_step("8", "Switch to OFF position the mechanical pumps A & B")
     set_relay("Mechanical Pump A", False)
+    time.sleep(5)
     set_relay("Mechanical Pump B", False)
+    time.sleep(5)
 
     show_step("10", "Switch to OFF position the air compressor")
     set_relay("Air Compressor", False)
+    time.sleep(5)
 
     show_step("13", "Switch to OFF position the cooling traps A & B")
     set_relay("Cooling Trap A", False)
+    time.sleep(5)
     set_relay("Cooling Trap B", False)
+    time.sleep(5)
 
     show_step("14", "Switch to OFF position the magnetic booster pump")
+    
     set_relay("Magnetic Booster Pump", False)
-
-    show_step("15", "Turn OFF position the water chiller")
-    pause_for_operator("Apague el Water Chiller manualmente (control externo).")
-
-    show_step("16", "Switch to OFF position the water level solenoid")
-    print("Water Level Solenoid: EXCLUIDO POR REQUISITO DEL PROYECTO -> Saltando paso.")
+    time.sleep(5)
 
     print("\n=== SECUENCIA DE APAGADO COMPLETADA CON ÉXITO ===", flush=True)
 

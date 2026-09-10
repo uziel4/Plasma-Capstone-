@@ -10,3 +10,7 @@ def main() -> None:
 
     except ProcessError as e:
         print(e)
+
+
+if __name__ == "__main__":
+    main()
