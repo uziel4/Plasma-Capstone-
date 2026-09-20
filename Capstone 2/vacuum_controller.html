@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plasma Capstone · Vacuum Controller</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Avenir Next", "Segoe UI", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+      --bg: #292d3b;
+      --panel: #34394b;
+      --panel-soft: #3b4256;
+      --surface: #64798d;
+      --surface-dark: #506578;
+      --line: #657085;
+      --text: #f6f7fb;
+      --muted: #b9c3d0;
+      --accent: #bad1e5;
+      --active: #92b3ce;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; color: var(--text); background: radial-gradient(ellipse at 50% -20%, #414a60 0%, #303647 44%, var(--bg) 100%); }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #d9e9f7; outline-offset: 3px; }
+    .app { width: min(100% - 28px, 1550px); margin: 0 auto; padding: 10px 0 12px; }
+    .topbar { display: flex; align-items: center; justify-content: center; margin-bottom: 12px; text-align: center; }
+    h1 { margin: 0; color: #f8faff; font-size: clamp(1.05rem, 2vw, 1.5rem); font-weight: 750; line-height: 1.2; letter-spacing: .008em; text-shadow: 0 1px 1px #11182755; }
+    .layout { display: grid; grid-template-columns: minmax(310px, 1.05fr) minmax(275px, .9fr) minmax(370px, 1.35fr); gap: 12px; height: calc(100dvh - 68px); min-height: 610px; align-items: stretch; }
+    .column { display: grid; gap: 10px; min-width: 0; min-height: 0; }
+    .column:nth-child(1) { grid-template-rows: minmax(175px, .82fr) minmax(355px, 2.68fr); }
+    .column:nth-child(2) { grid-template-rows: minmax(155px, 1.35fr) minmax(90px, .75fr) minmax(82px, .65fr) minmax(240px, 2.05fr); }
+    .column:nth-child(3) { grid-template-rows: minmax(142px, 1.1fr) minmax(175px, 1.45fr) minmax(175px, 1.45fr); }
+    .card { display: flex; flex-direction: column; min-width: 0; min-height: 0; border: 1px solid #788599; border-radius: 14px; background: linear-gradient(165deg, #3d4558 0%, #343b4e 55%, #303749 100%); box-shadow: 0 12px 24px #151a2930, inset 0 1px #ffffff20; overflow: hidden; }
+    .card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 0 13px 5px; padding: 11px 0 7px; border-bottom: 1px solid #b3c1d021; }
+    h2 { margin: 0; color: #f8faff; font-size: 1.04rem; font-weight: 750; line-height: 1.25; letter-spacing: .005em; }
+    .card-body { flex: 1; min-height: 0; padding: 3px 13px 12px; }
+    [aria-labelledby="flow-heading"] .card-body { display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+    [aria-labelledby="meter-heading"] .card-body { display: flex; align-items: center; }
+    .flow-value { display: flex; align-items: baseline; justify-content: center; margin-bottom: 2px; }
+    .flow-value strong { font-size: 1.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+    input[type="range"] { display: block; width: calc(100% - 28px); height: 10px; margin: 8px auto 10px; border: 1px solid #8297ab; border-radius: 999px; appearance: none; background: linear-gradient(90deg, #b6d2e7 0 var(--fill, 0%), #566a7e var(--fill, 0%) 100%); box-shadow: inset 0 2px 4px #18233055; }
+    input[type="range"]::-webkit-slider-thumb { width: 21px; height: 21px; border: 4px solid #f3f8fc; border-radius: 50%; appearance: none; background: #789ab6; box-shadow: 0 2px 6px #0006; }
+    input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 4px solid #f3f8fc; border-radius: 50%; background: #789ab6; box-shadow: 0 2px 6px #0006; }
+    .flow-path { display: flex; flex-direction: column; align-items: center; gap: 5px; margin-top: 0; }
+    .flow-path::before { content: "▼"; color: #e7eff5; font-size: .95rem; line-height: 1; }
+    .control-button { border: 1px solid #71859b; border-radius: 9px; background: #485b70; color: #eff4f8; box-shadow: inset 0 1px #ffffff1c, 0 2px 5px #11182724; transition: background .15s, transform .15s, border-color .15s; }
+    .control-button:hover { background: #556b81; transform: translateY(-1px); }
+    .control-button[aria-pressed="true"] { border-color: #9cd6b8; background: #3d806b; color: #fff; box-shadow: inset 0 1px #ffffff35, 0 0 0 2px #86cdb32a; }
+    .valve-button { position: relative; width: min(70%, 240px); min-height: 38px; padding: 8px 47px 8px 12px; font-size: 1rem; font-weight: 700; }
+    .equipment-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(7, minmax(0, 1fr)); gap: 6px; }
+    .equipment { position: relative; min-height: 0; padding: 5px 42px 5px 9px; text-align: left; }
+    .equipment:first-child { grid-column: 1 / -1; width: min(60%, 200px); justify-self: center; text-align: left; }
+    .equipment::after, .valve-button::after { content: "OFF"; position: absolute; top: 50%; right: 7px; transform: translateY(-50%); padding: 4px 6px; border-radius: 4px; background: #704953; color: #ffe4e6; font-size: .69rem; font-weight: 800; letter-spacing: .02em; }
+    .equipment[aria-pressed="true"]::after, .valve-button[aria-pressed="true"]::after { content: "ON"; background: #c8efda; color: #205b43; }
+    .equipment .number { display: block; color: #c9d9e7; font-size: .73rem; font-weight: 750; letter-spacing: .07em; }
+    .equipment .name { display: block; margin-top: 2px; font-size: .9rem; font-weight: 650; line-height: 1.12; }
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .mode-grid button { padding: 9px; font-weight: 800; }
+    #auto-on[aria-pressed="true"] { background: #3d806b; border-color: #9cd6b8; }
+    #auto-off[aria-pressed="true"] { background: #89515b; border-color: #dca0aa; color: #fff; }
+    .field { display: block; margin-top: 9px; }
+    .field span { display: block; margin-bottom: 6px; color: #d7e1eb; font-size: .79rem; font-weight: 700; }
+    .field input { width: 100%; height: 34px; padding: 0 11px; border: 1px solid #a6b4c3; border-radius: 7px; outline: none; background: #f9fbfd; color: #24313e; font-variant-numeric: tabular-nums; }
+    .field input:focus { box-shadow: 0 0 0 3px #a8c8e849; }
+    .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 6px; }
+    .metric { padding: 7px 9px; border: 1px solid #899db0; border-radius: 10px; background: linear-gradient(145deg, #596f84, #50657b); box-shadow: inset 0 1px #ffffff20; }
+    .metric span { display: block; overflow: hidden; color: #dbe4ed; font-size: .7rem; text-overflow: ellipsis; white-space: nowrap; }
+    .metric strong { display: block; margin-top: 2px; font-size: .94rem; font-variant-numeric: tabular-nums; }
+    .meter { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 8px 10px; border: 1px solid #899db0; border-radius: 10px; background: linear-gradient(145deg, #596f84, #50657b); }
+    .meter { width: 100%; }
+    .meter strong { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+    .gauge-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+    .gauge-mini { display: flex; flex-direction: column; justify-content: center; gap: 7px; min-width: 0; padding: 8px 10px; border: 1px solid #899db0; border-radius: 10px; background: linear-gradient(145deg, #596f84, #50657b); }
+    .gauge-mini .gauge-label { color: #e8eef5; font-size: .76rem; font-weight: 700; }
+    .gauge-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .gauge-percent { color: #fff; font-size: .88rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .bargraph { height: 18px; overflow: hidden; border: 1px solid #98aabd; border-radius: 5px; background: #303b4a; box-shadow: inset 0 2px 4px #11182466; }
+    .bargraph-fill { display: block; width: 0; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #718ca4, #c2d8ea); transition: width .7s ease; }
+    .bargraph-scale { display: flex; justify-content: space-between; align-items: baseline; gap: 5px; color: #d0dce7; font-size: .62rem; white-space: nowrap; }
+    .bargraph-scale strong { color: #fff; font-size: .8rem; font-variant-numeric: tabular-nums; }
+    .chart-card .card-head { padding-bottom: 5px; }
+    .chart-card .card-body { display: flex; flex-direction: column; padding-top: 1px; }
+    .chart-value { font-size: 1.12rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .chart-value small { color: var(--muted); font-size: .72rem; font-weight: normal; }
+    .chart { position: relative; flex: 1; min-height: 105px; border: 1px solid #78889b; border-radius: 9px; overflow: hidden; background: linear-gradient(#63798d, #52677c); }
+
+    .chart svg { position: relative; width: 100%; height: 100%; overflow: visible; }
+    .chart polyline { fill: none; stroke: #f7fbff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+    .chart circle { display: none; }
+    @media (max-width: 1130px) { .layout { height: auto; min-height: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); } .column { grid-template-rows: none !important; } .card { min-height: auto; } .equipment-grid { grid-template-rows: none; } .equipment { min-height: 48px; } .charts-column { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); } .charts-column > :first-child { grid-column: 1 / -1; } .chart { min-height: 165px; } }
+    @media (max-width: 700px) { .app { width: min(100% - 20px, 540px); padding-top: 12px; } .layout, .charts-column { display: grid; grid-template-columns: 1fr; } .charts-column > :first-child { grid-column: auto; } }
+    @media (prefers-reduced-motion: reduce) { .control-button { transition: none; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar"><h1>PUPR PLASMA ENGINEERING LABORATORY REACTOR VACUUM CONTROLLER</h1></header>
+
+    <main class="layout">
+      <div class="column">
+        <section class="card" aria-labelledby="flow-heading">
+          <div class="card-head"><h2 id="flow-heading">Manual Gas Flow Control</h2></div>
+          <div class="card-body">
+            <div class="flow-value"><strong id="flow-percent">0%</strong></div>
+            <input id="flow-slider" type="range" min="0" max="100" value="0" aria-label="Porcentaje de flujo de gas">
+            <div class="flow-path"><button class="control-button valve-button" id="main-valve" aria-pressed="false">Main Valve</button></div>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="manual-heading">
+          <div class="card-head"><h2 id="manual-heading">Manual Control</h2></div>
+          <div class="card-body equipment-grid" id="equipment-grid">
+            <button class="control-button equipment" aria-pressed="false"><span class="number">01</span><span class="name">Air Compressor</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">02</span><span class="name">Water Chiller</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">08</span><span class="name">Mechanical Pump A</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">03</span><span class="name">Booster Pump</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">09</span><span class="name">Mechanical Pump B</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">04</span><span class="name">Cool Trap A</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">10</span><span class="name">Diffusion Pump A</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">05</span><span class="name">Cool Trap B</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">11</span><span class="name">Diffusion Pump B</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">06</span><span class="name">Chamber Valve A</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">12</span><span class="name">Gate Valve A</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">07</span><span class="name">Chamber Valve B</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">13</span><span class="name">Gate Valve B</span></button>
+          </div>
+        </section>
+      </div>
+
+      <div class="column">
+        <section class="card" aria-labelledby="auto-heading">
+          <div class="card-head"><h2 id="auto-heading">Automatic Vacuum</h2></div>
+          <div class="card-body">
+            <div class="mode-grid"><button class="control-button" id="auto-on" aria-pressed="false">ON</button><button class="control-button" id="auto-off" aria-pressed="true">OFF</button></div>
+            <label class="field"><span>Desired Vacuum Level (Torr)</span><input id="vacuum-target" type="number" min="0.000000000001" max="760" step="any" value="0.000004"></label>
+            <label class="field"><span>Desired Mass Flow Level</span><input id="flow-target" type="number" min="0" max="1000" step="any" value="0.000004"></label>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="pressure-heading">
+          <div class="card-head"><h2 id="pressure-heading">Pneumatic and Coolant Pressure</h2></div>
+          <div class="card-body metric-grid"><div class="metric"><span>Air</span><strong>100 PSI</strong></div><div class="metric"><span>Coolant</span><strong>40 PSI</strong></div></div>
+        </section>
+        <section class="card" aria-labelledby="meter-heading">
+          <div class="card-head"><h2 id="meter-heading">Gas Mass Flow Meter</h2></div>
+          <div class="card-body"><div class="meter"><strong id="flow-meter">100 sccm</strong></div></div>
+        </section>
+        <section class="card" aria-labelledby="temp-heading">
+          <div class="card-head"><h2 id="temp-heading">Temperatures</h2></div>
+          <div class="card-body metric-grid">
+            <div class="metric"><span>Room</span><strong>24 °C</strong></div><div class="metric"><span>Coolant</span><strong>10 °C</strong></div>
+            <div class="metric"><span>Cool Trap A</span><strong>5 °C</strong></div><div class="metric"><span>Cool Trap B</span><strong>5 °C</strong></div>
+            <div class="metric"><span>Diffusion Pump A</span><strong>662 °C</strong></div><div class="metric"><span>Diffusion Pump B</span><strong>662 °C</strong></div>
+            <div class="metric"><span>Field Magnet A</span><strong>212 °C</strong></div><div class="metric"><span>Field Magnet B</span><strong>212 °C</strong></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="column charts-column">
+        <section class="card" aria-labelledby="levels-heading"><div class="card-head"><h2 id="levels-heading">Vacuum Levels</h2></div><div class="card-body gauge-row">
+          <div class="gauge-mini"><div class="gauge-head"><span class="gauge-label">Rough Manifold A</span><strong class="gauge-percent" id="rough-percent-a">0%</strong></div><div class="bargraph" id="rough-bar-a" role="progressbar" aria-label="Progreso hacia el vacío deseado, Rough Manifold A" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="bargraph-fill"></span></div><div class="bargraph-scale"><span>760 Torr</span><strong id="rough-a">0.080 Torr</strong><span id="rough-target-a">Objetivo</span></div></div>
+          <div class="gauge-mini"><div class="gauge-head"><span class="gauge-label">Rough Manifold B</span><strong class="gauge-percent" id="rough-percent-b">0%</strong></div><div class="bargraph" id="rough-bar-b" role="progressbar" aria-label="Progreso hacia el vacío deseado, Rough Manifold B" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="bargraph-fill"></span></div><div class="bargraph-scale"><span>760 Torr</span><strong id="rough-b">0.084 Torr</strong><span id="rough-target-b">Objetivo</span></div></div>
+        </div></section>
+        <section class="card chart-card" aria-labelledby="medium-heading"><div class="card-head"><div><h2 id="medium-heading">Medium Vacuum Gauge</h2></div><div class="chart-value" id="medium-value">1.00e-4 <small>Torr</small></div></div><div class="card-body"><div class="chart"><svg viewBox="0 0 500 160" preserveAspectRatio="none" aria-label="Gráfica simulada de vacío medio"><polyline id="medium-line" points=""></polyline><circle id="medium-dot" r="4"></circle></svg></div></div></section>
+        <section class="card chart-card" aria-labelledby="high-heading"><div class="card-head"><div><h2 id="high-heading">High Vacuum Gauge</h2></div><div class="chart-value" id="high-value">1.00e-12 <small>Torr</small></div></div><div class="card-body"><div class="chart"><svg viewBox="0 0 500 160" preserveAspectRatio="none" aria-label="Gráfica simulada de alto vacío"><polyline id="high-line" points=""></polyline><circle id="high-dot" r="4"></circle></svg></div></div></section>
+      </div>
+    </main>
+  </div>
+  <script>
+    const slider = document.querySelector('#flow-slider');
+    const vacuumTarget = document.querySelector('#vacuum-target');
+    let automatic = false;
+    let medium = 1e-4;
+    let high = 1e-12;
+    let roughA = 0.080;
+    let roughB = 0.084;
+    const mediumHistory = [0.95, 0.89, 0.90, 0.80, 0.81, 0.71, 0.72, 0.62, 0.63, 0.53, 0.54, 0.44, 0.45, 0.34, 0.25, 0.16];
+    const highHistory = [0.93, 0.87, 0.88, 0.78, 0.79, 0.69, 0.70, 0.60, 0.61, 0.51, 0.52, 0.42, 0.43, 0.32, 0.23, 0.14];
+    let chartSample = 0;
+    function drawChart(history, lineId, dotId) {
+      const points = history.map((value, index) => `${index * 500 / (history.length - 1)},${15 + (1 - value) * 130}`);
+      document.querySelector(lineId).setAttribute('points', points.join(' '));
+      const [x, y] = points.at(-1).split(',');
+      document.querySelector(dotId).setAttribute('cx', x);
+      document.querySelector(dotId).setAttribute('cy', y);
+    }
+    function desiredVacuum() {
+      const value = Number(vacuumTarget.value);
+      return Number.isFinite(value) && value > 0 ? Math.min(value, 760) : 4e-6;
+    }
+    function formatTorr(value) {
+      return value >= 0.001 ? value.toFixed(3) : value.toExponential(2);
+    }
+    function updateBargraph(barId, valueId, percentId, targetId, pressure, target) {
+      const percent = target >= 760 ? 100 : Math.max(0, Math.min(100, (Math.log10(760) - Math.log10(pressure)) / (Math.log10(760) - Math.log10(target)) * 100));
+      const bar = document.querySelector(barId);
+      bar.querySelector('.bargraph-fill').style.width = `${percent}%`;
+      bar.setAttribute('aria-valuenow', String(Math.round(percent)));
+      bar.setAttribute('aria-valuetext', `${Math.round(percent)}%, presión ${formatTorr(pressure)} Torr, objetivo ${formatTorr(target)} Torr`);
+      document.querySelector(valueId).textContent = `${formatTorr(pressure)} Torr`;
+      document.querySelector(percentId).textContent = `${Math.round(percent)}%`;
+      document.querySelector(targetId).textContent = `${formatTorr(target)} Torr`;
+    }
+    function updateRoughLevels() {
+      const target = desiredVacuum();
+      updateBargraph('#rough-bar-a', '#rough-a', '#rough-percent-a', '#rough-target-a', roughA, target);
+      updateBargraph('#rough-bar-b', '#rough-b', '#rough-percent-b', '#rough-target-b', roughB, target);
+    }
+    function updateFlow() {
+      const percent = Number(slider.value);
+      slider.style.setProperty('--fill', `${percent}%`);
+      document.querySelector('#flow-percent').textContent = `${percent}%`;
+      const valveOpen = document.querySelector('#main-valve').getAttribute('aria-pressed') === 'true';
+      document.querySelector('#flow-meter').textContent = `${valveOpen ? percent : 0} sccm`;
+    }
+    function toggle(button) {
+      button.setAttribute('aria-pressed', String(button.getAttribute('aria-pressed') !== 'true'));
+    }
+    document.querySelectorAll('#equipment-grid button').forEach(button => button.addEventListener('click', () => toggle(button)));
+    document.querySelector('#main-valve').addEventListener('click', event => {
+      toggle(event.currentTarget);
+      updateFlow();
+    });
+    function setAutomatic(value) {
+      automatic = value;
+      document.querySelector('#auto-on').setAttribute('aria-pressed', String(value));
+      document.querySelector('#auto-off').setAttribute('aria-pressed', String(!value));
+    }
+    document.querySelector('#auto-on').addEventListener('click', () => setAutomatic(true));
+    document.querySelector('#auto-off').addEventListener('click', () => setAutomatic(false));
+    slider.addEventListener('input', updateFlow);
+    vacuumTarget.addEventListener('input', updateRoughLevels);
+    function tick() {
+      const target = desiredVacuum();
+      if (automatic) {
+        if (medium > target) medium = Math.max(target, medium * 0.88);
+        const highTarget = Math.min(target * 1e-6, 1e-12);
+        if (high > highTarget) high = Math.max(highTarget, high * 0.90);
+        if (roughA > target) roughA = Math.max(target, roughA * 0.96);
+        if (roughB > target) roughB = Math.max(target, roughB * 0.96);
+      }
+      if (automatic) {
+        chartSample++;
+        const peak = chartSample % 3 === 0 ? 1.05 : chartSample % 3 === 1 ? 0.96 : 1;
+        mediumHistory.push(Math.max(.03, mediumHistory.at(-1) * .96 * peak));
+        highHistory.push(Math.max(.03, highHistory.at(-1) * .96 * peak));
+        mediumHistory.shift(); highHistory.shift();
+      }
+      document.querySelector('#medium-value').innerHTML = `${medium.toExponential(2)} <small>Torr</small>`;
+      document.querySelector('#high-value').innerHTML = `${high.toExponential(2)} <small>Torr</small>`;
+      updateRoughLevels();
+      drawChart(mediumHistory, '#medium-line', '#medium-dot');
+      drawChart(highHistory, '#high-line', '#high-dot');
+    }
+    slider.style.setProperty('--fill', '0%'); tick();
+    setInterval(tick, 1500);
+  </script>
+</body>
+</html>

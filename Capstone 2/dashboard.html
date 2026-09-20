@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plasma Capstone · Dashboard</title>
+  <style>
+    :root { font-family: Arial, Helvetica, sans-serif; color: #1e2731; background: #e9edf1; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; }
+    header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .6rem 1.2rem; padding: .65rem clamp(1rem, 2vw, 2rem); background: linear-gradient(#29323b, #232c35); color: white; }
+    header strong { font-size: 1.05rem; }
+    .controls { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; }
+    .controls button { font: inherit; font-size: .9rem; font-weight: bold; padding: .58rem 1rem; border: 1px solid #0002; border-radius: 7px; cursor: pointer; }
+    .controls button:not(:disabled):hover { filter: brightness(1.08); }
+    .controls button:focus-visible { outline: 3px solid #66a9ff; outline-offset: 2px; }
+    .controls button:disabled { opacity: .48; cursor: default; }
+    #start { background: #159653; color: #fff; }
+    #confirm { background: #d3ac40; color: #252a2e; }
+    #reset { background: #f5f6f7; color: #1e2731; }
+    #status { display: inline-flex; align-items: center; gap: .55rem; padding-left: .8rem; border-left: 1px solid #7c858c; color: #f2f4f6; font-size: .87rem; }
+    #status::before { content: ""; width: 11px; height: 11px; flex: none; border-radius: 50%; background: #aeb2b5; }
+    #status.running::before { background: #2bb772; }
+    .progress, .help { width: calc(100% - 2rem); max-width: 1600px; margin: .55rem auto; background: #fbfcfd; border: 1px solid #bbc8d4; border-radius: 7px; }
+    .progress { padding: .65rem 1rem; }
+    .progress strong { display: block; margin-bottom: .2rem; font-size: 1rem; }
+    .progress p { margin: .1rem 0; font-size: .88rem; }
+    #result { color: #157947; font-weight: bold; }
+    #result.fault { color: #bd262e; }
+    main { width: 100%; margin: auto; overflow: hidden; display: flex; justify-content: center; align-items: flex-start; }
+    .diagram { position: relative; width: 1600px; height: 900px; flex: none; zoom: var(--scale, 1); background: radial-gradient(ellipse at center, #f8fafc 0%, #e8edf1 78%, #dce4ea 100%); }
+    svg { display: block; width: 100%; height: 100%; }
+    .readout { position: absolute; width: 122px; height: 57px; padding: 0 10px; border: 1.5px solid #697784; border-radius: 12px; background: #fff; color: #16212b; font-size: 17px; font-weight: bold; font-variant-numeric: tabular-nums; display: flex; align-items: center; justify-content: space-between; gap: 3px; box-shadow: 0 3px 8px #202a321b; }
+    .readout .value { min-width: 0; font-size: 16px; letter-spacing: -.04em; white-space: nowrap; }
+    .readout .unit { flex: none; color: #586674; font-size: 12px; font-weight: 600; }
+    .readout.coil-readout { width: 106px; }
+    .state { position: absolute; padding: 0; border: 3px solid #f20d13; border-radius: 10px; background: transparent; pointer-events: none; }
+    .state.coil-state { border-radius: 14px; }
+    .state.on { border-color: #17a65b; }
+    .caption { font-size: 17px; font-weight: bold; fill: #1d2630; text-anchor: middle; }
+    .caption.light { fill: white; paint-order: stroke; stroke: #555; stroke-width: 2px; stroke-linejoin: round; }
+    .pipe { fill: url(#pipe); stroke: #2b3238; stroke-width: 1.4; }
+    .block { fill: url(#block); stroke: #2b3238; stroke-width: 1.4; }
+    .dark { fill: url(#dark); stroke: #20262b; stroke-width: 1.3; }
+    .help { padding: .6rem .8rem; color: #455260; font-size: .78rem; line-height: 1.35; }
+    @media (max-width: 700px) { header { justify-content: center; text-align: center; } .controls { justify-content: center; } #status { border-left: 0; padding-left: 0; } }
+  </style>
+</head>
+<body>
+  <header><strong>Plasma Capstone · Dashboard · SIMULACIÓN</strong><div class="controls"><button id="start">Iniciar secuencia</button><button id="confirm" disabled>Confirmar Water Chiller ON</button><button id="reset">Reiniciar</button><span id="status" role="status">Sistema apagado</span></div></header>
+  <section class="progress" aria-live="polite"><strong>Condición actual</strong><p id="condition">Inicia la secuencia para ver las comprobaciones.</p><p id="result"></p></section>
+  <main><div class="diagram" id="diagram">
+    <svg viewBox="0 0 1600 900" role="img" aria-label="Diagrama del reactor de plasma con lecturas y estados">
+      <defs>
+        <linearGradient id="pipe" x2="0" y2="1"><stop stop-color="#f4f4f4"/><stop offset=".35" stop-color="#aaa"/><stop offset=".7" stop-color="#454545"/><stop offset="1" stop-color="#858585"/></linearGradient>
+        <linearGradient id="block" x2="0" y2="1"><stop stop-color="#f7f7f7"/><stop offset=".5" stop-color="#aaa"/><stop offset="1" stop-color="#555"/></linearGradient>
+        <linearGradient id="dark" x2="0" y2="1"><stop stop-color="#e9e9e9"/><stop offset=".27" stop-color="#828282"/><stop offset=".65" stop-color="#333"/><stop offset="1" stop-color="#3c3c3c"/></linearGradient>
+      </defs>
+      <!-- Cooling and compressed-air lines -->
+      <rect class="pipe" x="170" y="107" width="286" height="24"/><rect class="pipe" x="373" y="49" width="23" height="141"/><rect class="pipe" x="394" y="49" width="62" height="24"/><rect class="pipe" x="394" y="166" width="62" height="23"/>
+      <rect class="pipe" x="1360" y="107" width="60" height="24"/>
+      <rect class="block" x="70" y="71" width="102" height="95" rx="12"/><rect class="block" x="233" y="71" width="102" height="95" rx="12"/><rect class="block" x="1420" y="71" width="101" height="95" rx="12"/>
+      <!-- Chamber and coils -->
+      <rect class="dark" x="215" y="288" width="1140" height="187"/><rect class="block" x="203" y="270" width="24" height="218"/><rect class="block" x="487" y="270" width="24" height="218"/><rect class="block" x="1076" y="270" width="24" height="218"/><rect class="block" x="1343" y="270" width="24" height="218"/>
+      <rect class="dark" x="753" y="107" width="58" height="543"/><rect class="dark" x="620" y="239" width="27" height="279" rx="12"/><rect class="dark" x="925" y="239" width="27" height="279" rx="12"/>
+      <!-- Valves, traps, and pumps -->
+      <rect class="pipe" x="442" y="473" width="29" height="215"/><rect class="pipe" x="1109" y="473" width="29" height="215"/>
+      <rect class="block" x="314" y="475" width="80" height="45" rx="8"/><rect class="block" x="441" y="496" width="72" height="48" rx="8"/><rect class="block" x="1181" y="475" width="80" height="45" rx="8"/><rect class="block" x="1066" y="496" width="72" height="48" rx="8"/>
+      <rect class="pipe" x="487" y="602" width="196" height="9"/><rect class="pipe" x="675" y="604" width="8" height="153"/><rect class="pipe" x="896" y="602" width="199" height="9"/><rect class="pipe" x="896" y="604" width="8" height="153"/>
+      <ellipse class="dark" cx="354" cy="699" rx="49" ry="101"/><ellipse class="dark" cx="1224" cy="699" rx="49" ry="101"/>
+      <rect class="block" x="314" y="588" width="80" height="32" rx="6"/><rect class="block" x="1184" y="588" width="80" height="32" rx="6"/>
+      <rect class="pipe" x="402" y="686" width="111" height="30"/><rect class="pipe" x="1068" y="686" width="110" height="30"/>
+      <rect class="block" x="476" y="635" width="69" height="49" rx="8"/><rect class="block" x="1035" y="635" width="69" height="49" rx="8"/>
+      <rect class="block" x="316" y="778" width="77" height="32" rx="7"/><rect class="block" x="1186" y="778" width="76" height="32" rx="7"/>
+      <rect class="block" x="620" y="755" width="117" height="72" rx="10"/><rect class="block" x="844" y="755" width="117" height="72" rx="10"/>
+      <!-- Labels -->
+      <g class="caption">
+        <text x="121" y="185">Water Chiller</text><text x="283" y="185">Booster Pump</text><text x="516" y="30">Water Temp</text><text x="516" y="141">Water Pressure</text>
+        <text x="691" y="40">Medium Vacuum</text><text x="878" y="41">High Vacuum</text><text x="1300" y="87">Air Pressure</text><text x="1471" y="185">Air Compressor</text>
+        <text x="633" y="213">Field Coil</text><text x="633" y="234">A</text><text x="938" y="213">Field Coil</text><text x="938" y="234">B</text>
+        <text x="259" y="502">Gate Valve</text><text x="259" y="523">A</text><text x="1325" y="502">Gate Valve</text><text x="1325" y="523">B</text>
+        <text x="233" y="563">Cool Trap</text><text x="233" y="585">A</text><text x="1344" y="563">Cool Trap</text><text x="1344" y="585">B</text>
+        <text x="576" y="547">Chamber Valve</text><text x="576" y="568">A</text><text x="1000" y="547">Chamber Valve</text><text x="1000" y="568">B</text>
+        <text x="581" y="703">Diffuse Valve</text><text x="581" y="725">A</text><text x="1003" y="703">Diffuse Valve</text><text x="1003" y="725">B</text>
+        <text x="354" y="830">Diffusion Pump A</text><text x="1224" y="830">Diffusion Pump B</text><text x="678" y="850">Mechanical Pump A</text><text x="901" y="850">Mechanical Pump B</text>
+        <text x="470" y="793">Diff Pump A</text><text x="470" y="815">Temp</text><text x="1114" y="793">Diff Pump B</text><text x="1114" y="815">Temp</text>
+      </g>
+      <g class="caption light"><text x="564" y="350">Coil A Temp</text><text x="1014" y="350">Coil B Temp</text><text x="354" y="606">Trap A Temp</text><text x="1223" y="606">Trap B Temp</text></g>
+    </svg>
+    <div class="readout" data-reading="water_temp" style="left:454px;top:33px" role="img" aria-label="Espacio para Water Temp"><span class="value">—</span><span class="unit">°C</span></div>
+    <div class="readout" data-reading="water_pressure" style="left:454px;top:146px" role="img" aria-label="Espacio para Water Pressure"><span class="value">—</span><span class="unit">bar</span></div>
+    <div class="readout" data-reading="medium_vacuum" style="left:630px;top:45px" role="img" aria-label="Espacio para Medium Vacuum"><span class="value">—</span><span class="unit">mbar</span></div>
+    <div class="readout" data-reading="high_vacuum" style="left:817px;top:46px" role="img" aria-label="Espacio para High Vacuum"><span class="value">—</span><span class="unit">mbar</span></div>
+    <div class="readout" data-reading="air_pressure" style="left:1240px;top:92px" role="img" aria-label="Espacio para Air Pressure"><span class="value">—</span><span class="unit">bar</span></div>
+    <div class="readout coil-readout" data-reading="coil_a_temp" style="left:511px;top:365px" role="img" aria-label="Espacio para Coil A Temp"><span class="value">—</span><span class="unit">°C</span></div>
+    <div class="readout coil-readout" data-reading="coil_b_temp" style="left:961px;top:365px" role="img" aria-label="Espacio para Coil B Temp"><span class="value">—</span><span class="unit">°C</span></div>
+    <div class="readout" data-reading="trap_a_temp" style="left:292px;top:528px" role="img" aria-label="Espacio para Trap A Temp"><span class="value">—</span><span class="unit">°C</span></div>
+    <div class="readout" data-reading="trap_b_temp" style="left:1161px;top:528px" role="img" aria-label="Espacio para Trap B Temp"><span class="value">—</span><span class="unit">°C</span></div>
+    <div class="readout" data-reading="diff_pump_a_temp" style="left:407px;top:720px" role="img" aria-label="Espacio para Diff Pump A Temp"><span class="value">—</span><span class="unit">°C</span></div>
+    <div class="readout" data-reading="diff_pump_b_temp" style="left:1052px;top:720px" role="img" aria-label="Espacio para Diff Pump B Temp"><span class="value">—</span><span class="unit">°C</span></div>
+    <div class="state" style="left:69px;top:70px;width:104px;height:97px" aria-label="Water Chiller"></div>
+    <div class="state" style="left:232px;top:70px;width:104px;height:97px" aria-label="Booster Pump"></div>
+    <div class="state" style="left:1419px;top:70px;width:103px;height:97px" aria-label="Air Compressor"></div>
+    <div class="state coil-state" style="left:619px;top:238px;width:29px;height:281px" aria-label="Field Coil A"></div>
+    <div class="state coil-state" style="left:924px;top:238px;width:29px;height:281px" aria-label="Field Coil B"></div>
+    <div class="state" style="left:312px;top:474px;width:83px;height:47px" aria-label="Gate Valve A"></div>
+    <div class="state" style="left:439px;top:494px;width:76px;height:52px" aria-label="Chamber Valve A"></div>
+    <div class="state" style="left:1180px;top:474px;width:83px;height:47px" aria-label="Gate Valve B"></div>
+    <div class="state" style="left:1064px;top:494px;width:76px;height:52px" aria-label="Chamber Valve B"></div>
+    <div class="state" style="left:285px;top:523px;width:134px;height:67px" aria-label="Cool Trap A"></div>
+    <div class="state" style="left:1154px;top:523px;width:134px;height:67px" aria-label="Cool Trap B"></div>
+    <div class="state" style="left:475px;top:634px;width:72px;height:52px" aria-label="Diffuse Valve A"></div>
+    <div class="state" style="left:1033px;top:634px;width:72px;height:52px" aria-label="Diffuse Valve B"></div>
+    <div class="state" style="left:314px;top:777px;width:80px;height:35px" aria-label="Diffusion Pump A"></div>
+    <div class="state" style="left:1184px;top:777px;width:80px;height:35px" aria-label="Diffusion Pump B"></div>
+    <div class="state" style="left:619px;top:754px;width:120px;height:75px" aria-label="Mechanical Pump A"></div>
+    <div class="state" style="left:842px;top:754px;width:120px;height:75px" aria-label="Mechanical Pump B"></div>
+  </div></main>
+  <p class="help">SIMULACIÓN basada en startup_process_2.py. Las comprobaciones y valores avanzan con tiempo acelerado. La presión de aire se muestra en bar y el vacío en mbar (convertidos de PSI y Torr); las casillas sin lectura en la secuencia muestran —. Medium Vacuum y High Vacuum representan la misma presión de cámara en dos momentos. No hay conexión al hardware.</p>
+  <script>
+    const diagram = document.querySelector('#diagram');
+    function resize() {
+      const main = document.querySelector('main');
+      const headerHeight = document.querySelector('header').getBoundingClientRect().height;
+      const progressHeight = document.querySelector('.progress').getBoundingClientRect().height;
+      const helpHeight = document.querySelector('.help').getBoundingClientRect().height;
+      const viewportHeight = window.visualViewport?.height || window.innerHeight;
+      const availableHeight = Math.max(0, viewportHeight - headerHeight - progressHeight - helpHeight - 28);
+      const scale = Math.min(main.clientWidth / 1600, availableHeight / 900);
+      diagram.style.setProperty('--scale', scale);
+      main.style.height = `${900 * scale}px`;
+    }
+    addEventListener('resize', resize);
+    window.visualViewport?.addEventListener('resize', resize);
+    const layoutObserver = new ResizeObserver(resize);
+    ['header', '.progress', '.help'].forEach(selector => layoutObserver.observe(document.querySelector(selector)));
+    resize();
+
+    const stageEquipment = {
+      1: ['Air Compressor', 'Cool Trap A', 'Cool Trap B'],
+      2: ['Water Chiller'],
+      3: ['Booster Pump'],
+      4: ['Diffuse Valve A', 'Diffuse Valve B'],
+      5: ['Chamber Valve A', 'Chamber Valve B'],
+      6: ['Mechanical Pump A', 'Mechanical Pump B'],
+      7: ['Diffusion Pump A', 'Diffusion Pump B'],
+      9: ['Gate Valve A', 'Gate Valve B']
+    };
+    // Mismos valores iniciales, incrementos y límites que startup_process_2_config.py.
+    // El tiempo de espera se acelera únicamente para la vista en el navegador.
+    const config = {
+      airStart: 75, airStep: 25, minAir: 100,
+      waterStart: 24, waterStep: 2, maxWater: 10,
+      reactorWaterStart: 24, reactorWaterStep: 2, maxReactorWater: 10,
+      mechanicalStart: 20, mechanicalStep: 3, minMechanical: 37.78,
+      chamberStart: 760, roughingFactor: 0.20, diffusionFactor: 0.50,
+      crossover: 0.025, diffusionStart: 20, diffusionStep: 20,
+      minDiffusion: 177, maxChecks: 900
+    };
+    const labels = {
+      1: 'Compresor de aire y trampas de enfriamiento',
+      2: 'Water Chiller (control externo)',
+      3: 'Magnetic Booster Pump',
+      4: 'Abrir válvulas diffuse A y B',
+      5: 'Abrir válvulas chamber A y B',
+      6: 'Bombas mecánicas A y B',
+      7: 'Bombas de difusión A y B',
+      8: 'Cerrar válvulas chamber A y B',
+      9: 'Abrir válvulas gate A y B'
+    };
+    const startButton = document.querySelector('#start');
+    const confirmButton = document.querySelector('#confirm');
+    const status = document.querySelector('#status');
+    const condition = document.querySelector('#condition');
+    const result = document.querySelector('#result');
+    let runId = 0;
+    let manualResolve = null;
+    let active = new Set();
+    let sensors;
+
+    function setReading(key, value) {
+      const readout = document.querySelector(`[data-reading="${key}"]`);
+      readout.querySelector('.value').textContent = value;
+      readout.setAttribute('aria-label', `${key.replaceAll('_', ' ')}: ${value} ${readout.querySelector('.unit').textContent}`);
+    }
+    function setEquipment(names, on) {
+      names.forEach(name => on ? active.add(name) : active.delete(name));
+      document.querySelectorAll('.state').forEach(element => {
+        element.classList.toggle('on', active.has(element.getAttribute('aria-label')));
+      });
+    }
+    function enterStep(step) {
+      status.textContent = `Paso ${step}/9: ${labels[step]}`;
+      status.classList.add('running');
+      condition.textContent = labels[step];
+      result.textContent = '';
+      result.classList.remove('fault');
+    }
+    function assertCurrent(id) {
+      if (id !== runId) throw new Error('Simulación reiniciada');
+    }
+    async function pause(id, milliseconds = 300) {
+      await new Promise(resolve => setTimeout(resolve, milliseconds));
+      assertCurrent(id);
+    }
+    function readPressure(factor) {
+      sensors.chamber = Math.max(config.crossover, sensors.chamber * factor);
+      return sensors.chamber;
+    }
+    function mbar(valueInTorr) {
+      const value = valueInTorr * 1.333223874;
+      return value >= 1 ? value.toFixed(2) : value.toExponential(2);
+    }
+    async function check(id, title, read, accepted, show) {
+      condition.textContent = title;
+      for (let attempt = 1; attempt <= config.maxChecks; attempt++) {
+        assertCurrent(id);
+        const value = read();
+        show(value);
+        const passed = accepted(value);
+        result.textContent = `Lectura ${attempt}: ${passed ? 'CUMPLE' : 'NO CUMPLE · esperando'} — ${Array.isArray(value) ? value.map(v => v.toFixed(1)).join(' / ') : value.toPrecision(4)}`;
+        await pause(id);
+        if (passed) return;
+      }
+      throw new Error(`Tiempo máximo excedido: ${title}`);
+    }
+    async function sequence(id) {
+      try {
+        enterStep(1);
+        setEquipment(['Air Compressor', 'Cool Trap A', 'Cool Trap B'], true);
+        sensors.air += config.airStep;
+        setReading('air_pressure', (sensors.air / 14.5037738).toFixed(2));
+        condition.textContent = 'AIR PRESSURE ≥ 100 PSI';
+        result.textContent = sensors.air >= config.minAir ? 'CUMPLE' : 'FAULT: presión de aire insuficiente';
+        if (sensors.air < config.minAir) throw new Error('Cooling System Failure');
+        await pause(id, 700);
+
+        enterStep(2);
+        condition.textContent = 'Confirmar manualmente Water Chiller ON';
+        confirmButton.disabled = false;
+        await new Promise(resolve => manualResolve = resolve);
+        manualResolve = null;
+        assertCurrent(id);
+        confirmButton.disabled = true;
+        setEquipment(['Water Chiller'], true);
+        await check(id, 'WATER LINE TEMPERATURE ≤ 10 °C',
+          () => sensors.water = Math.max(config.maxWater, sensors.water - config.waterStep),
+          value => value <= config.maxWater,
+          value => setReading('water_temp', value.toFixed(1)));
+        condition.textContent = 'Espera antes del booster: 15 s (acelerados)';
+        await pause(id, 1500);
+
+        enterStep(3);
+        setEquipment(['Booster Pump'], true);
+        await check(id, 'REACTOR WATER LINE TEMPERATURE ≤ 10 °C',
+          () => sensors.reactorWater = Math.max(config.maxReactorWater, sensors.reactorWater - config.reactorWaterStep),
+          value => value <= config.maxReactorWater,
+          value => setReading('water_temp', value.toFixed(1)));
+
+        enterStep(4);
+        setEquipment(['Diffuse Valve A', 'Diffuse Valve B'], true);
+        condition.textContent = 'Asentar válvulas diffuse: 5 s (acelerados)';
+        await pause(id, 500);
+
+        enterStep(5);
+        setEquipment(['Chamber Valve A', 'Chamber Valve B'], true);
+        condition.textContent = 'Asentar válvulas chamber: 5 s (acelerados)';
+        await pause(id, 500);
+
+        enterStep(6);
+        setEquipment(['Mechanical Pump A', 'Mechanical Pump B'], true);
+        await check(id, 'MECHANICAL PUMP TEMPERATURE ≥ 37.78 °C',
+          () => sensors.mechanical += config.mechanicalStep,
+          value => value >= config.minMechanical,
+          () => {}); // La imagen no tiene casilla para temperatura de bomba mecánica.
+        await check(id, 'CHAMBER VACUUM ≤ 2.5 × 10⁻² Torr (roughing)',
+          () => readPressure(config.roughingFactor),
+          value => value <= config.crossover,
+          value => setReading('medium_vacuum', mbar(value)));
+
+        enterStep(7);
+        setEquipment(['Diffusion Pump A', 'Diffusion Pump B'], true);
+        await check(id, 'DIFFUSION PUMP A y B ≥ 177 °C',
+          () => {
+            sensors.diffusionA += config.diffusionStep;
+            sensors.diffusionB += config.diffusionStep;
+            return [sensors.diffusionA, sensors.diffusionB];
+          },
+          value => value[0] >= config.minDiffusion && value[1] >= config.minDiffusion,
+          value => {
+            setReading('diff_pump_a_temp', value[0].toFixed(1));
+            setReading('diff_pump_b_temp', value[1].toFixed(1));
+          });
+        await check(id, 'CHAMBER VACUUM ≤ 2.5 × 10⁻² Torr (final)',
+          () => readPressure(config.diffusionFactor),
+          value => value <= config.crossover,
+          value => setReading('high_vacuum', mbar(value)));
+
+        enterStep(8);
+        setEquipment(['Chamber Valve A', 'Chamber Valve B'], false);
+        condition.textContent = 'CHAMBER VALVE A = OFF y B = OFF';
+        result.textContent = 'CUMPLE';
+        await pause(id, 700);
+
+        enterStep(9);
+        setEquipment(['Gate Valve A', 'Gate Valve B'], true);
+        condition.textContent = 'Asentar válvulas gate: 5 s (acelerados)';
+        await pause(id, 500);
+        condition.textContent = 'GATE VALVE A = ON y B = ON';
+        result.textContent = 'CUMPLE · SISTEMA OPERACIONAL (simulado)';
+        status.textContent = 'Secuencia completa · simulación';
+        status.classList.remove('running');
+        startButton.disabled = false;
+      } catch (error) {
+        if (id !== runId) return;
+        status.textContent = 'Secuencia detenida';
+        status.classList.remove('running');
+        result.textContent = `FAULT: ${error.message}`;
+        result.classList.add('fault');
+        setEquipment([...active], false);
+        startButton.disabled = false;
+        confirmButton.disabled = true;
+      }
+    }
+    function reset() {
+      runId++;
+      if (manualResolve) { manualResolve(); manualResolve = null; }
+      startButton.disabled = false;
+      confirmButton.disabled = true;
+      status.textContent = 'Sistema apagado';
+      status.classList.remove('running');
+      condition.textContent = 'Inicia la secuencia para ver las comprobaciones.';
+      result.textContent = '';
+      result.classList.remove('fault');
+      document.querySelectorAll('.readout').forEach(element => {
+        element.querySelector('.value').textContent = '—';
+      });
+      setEquipment([...active], false);
+      sensors = {air: config.airStart, water: config.waterStart,
+        reactorWater: config.reactorWaterStart, mechanical: config.mechanicalStart,
+        chamber: config.chamberStart, diffusionA: config.diffusionStart,
+        diffusionB: config.diffusionStart};
+    }
+    startButton.addEventListener('click', () => {
+      reset();
+      startButton.disabled = true;
+      sequence(runId);
+    });
+    confirmButton.addEventListener('click', () => {
+      if (manualResolve) manualResolve();
+    });
+    document.querySelector('#reset').addEventListener('click', reset);
+    reset();
+  </script>
+</body>
+</html>
