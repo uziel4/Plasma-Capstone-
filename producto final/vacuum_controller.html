@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plasma Capstone · Vacuum Controller</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Avenir Next", "Segoe UI", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+      --bg: #292d3b;
+      --panel: #34394b;
+      --panel-soft: #3b4256;
+      --surface: #64798d;
+      --surface-dark: #506578;
+      --line: #657085;
+      --text: #f6f7fb;
+      --muted: #b9c3d0;
+      --accent: #bad1e5;
+      --active: #92b3ce;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; color: var(--text); background: radial-gradient(ellipse at 50% -20%, #414a60 0%, #303647 44%, var(--bg) 100%); }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #d9e9f7; outline-offset: 3px; }
+    .app { width: min(100% - 28px, 1550px); margin: 0 auto; padding: 10px 0 12px; }
+    .topbar { display: flex; align-items: center; justify-content: center; margin-bottom: 12px; text-align: center; }
+    h1 { margin: 0; color: #f8faff; font-size: clamp(1.05rem, 2vw, 1.5rem); font-weight: 750; line-height: 1.2; letter-spacing: .008em; text-shadow: 0 1px 1px #11182755; }
+    .layout { display: grid; grid-template-columns: minmax(310px, 1.05fr) minmax(275px, .9fr) minmax(370px, 1.35fr); gap: 12px; align-items: start; }
+    .column { display: grid; gap: 12px; min-width: 0; align-content: start; }
+    .card { display: flex; flex-direction: column; min-width: 0; min-height: 0; border: 1px solid #788599; border-radius: 14px; background: linear-gradient(165deg, #3d4558 0%, #343b4e 55%, #303749 100%); box-shadow: 0 12px 24px #151a2930, inset 0 1px #ffffff20; overflow: hidden; }
+    .card-head { flex-wrap: wrap; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 0 13px 5px; padding: 11px 0 7px; border-bottom: 1px solid #b3c1d021; }
+    h2 { margin: 0; color: #f8faff; font-size: 1.04rem; font-weight: 750; line-height: 1.25; letter-spacing: .005em; }
+    .card-body { flex: 1; min-height: 0; padding: 3px 13px 12px; }
+    [aria-labelledby="flow-heading"] .card-body { display: flex; flex-direction: column; justify-content: center; gap: 12px; padding-top: 16px; padding-bottom: 16px; }
+    [aria-labelledby="meter-heading"] .card-body { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+    .flow-value { display: flex; align-items: baseline; justify-content: center; margin-bottom: 2px; }
+    .flow-value strong { font-size: 1.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+    input[type="range"] { display: block; width: calc(100% - 28px); height: 10px; margin: 8px auto 10px; border: 1px solid #8297ab; border-radius: 999px; appearance: none; background: linear-gradient(90deg, #b6d2e7 0 var(--fill, 0%), #566a7e var(--fill, 0%) 100%); box-shadow: inset 0 2px 4px #18233055; }
+    input[type="range"]::-webkit-slider-thumb { width: 21px; height: 21px; border: 4px solid #f3f8fc; border-radius: 50%; appearance: none; background: #789ab6; box-shadow: 0 2px 6px #0006; }
+    input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 4px solid #f3f8fc; border-radius: 50%; background: #789ab6; box-shadow: 0 2px 6px #0006; }
+    .flow-path { display: flex; flex-direction: column; align-items: center; gap: 5px; margin-top: 0; }
+    .flow-path::before { content: "▼"; color: #e7eff5; font-size: .95rem; line-height: 1; }
+    .control-button { border: 1px solid #71859b; border-radius: 9px; background: #485b70; color: #eff4f8; box-shadow: inset 0 1px #ffffff1c, 0 2px 5px #11182724; transition: background .15s, transform .15s, border-color .15s; }
+    .control-button:hover { background: #556b81; transform: translateY(-1px); }
+    .control-button[aria-pressed="true"] { border-color: #9cd6b8; background: #3d806b; color: #fff; box-shadow: inset 0 1px #ffffff35, 0 0 0 2px #86cdb32a; }
+    .valve-button { position: relative; width: min(70%, 240px); min-height: 38px; padding: 8px 47px 8px 12px; font-size: 1rem; font-weight: 700; }
+    .equipment-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(68px, auto); gap: 8px; }
+    .equipment { position: relative; min-height: 0; padding: 5px 42px 5px 9px; text-align: left; }
+    .equipment::after, .valve-button::after { content: "OFF"; position: absolute; top: 50%; right: 7px; transform: translateY(-50%); padding: 4px 6px; border-radius: 4px; background: #704953; color: #ffe4e6; font-size: .69rem; font-weight: 800; letter-spacing: .02em; }
+    .equipment[aria-pressed="true"]::after, .valve-button[aria-pressed="true"]::after { content: "ON"; background: #c8efda; color: #205b43; }
+    .equipment .number { display: block; color: #c9d9e7; font-size: .73rem; font-weight: 750; letter-spacing: .07em; }
+    .equipment .name { display: block; margin-top: 2px; font-size: .9rem; font-weight: 650; line-height: 1.12; }
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .mode-grid button { padding: 9px; font-weight: 800; }
+    #auto-on[aria-pressed="true"] { background: #3d806b; border-color: #9cd6b8; }
+    #auto-off[aria-pressed="true"] { background: #89515b; border-color: #dca0aa; color: #fff; }
+    .field { display: block; margin-top: 9px; }
+    .field span { display: block; margin-bottom: 6px; color: #d7e1eb; font-size: .79rem; font-weight: 700; }
+    .field input { width: 100%; height: 34px; padding: 0 11px; border: 1px solid #a6b4c3; border-radius: 7px; outline: none; background: #f9fbfd; color: #24313e; font-variant-numeric: tabular-nums; }
+    .field input:focus { box-shadow: 0 0 0 3px #a8c8e849; }
+    .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(64px, auto); gap: 8px; }
+    .metric { padding: 7px 9px; border: 1px solid #899db0; border-radius: 10px; background: linear-gradient(145deg, #596f84, #50657b); box-shadow: inset 0 1px #ffffff20; }
+    .metric span { display: block; color: #dbe4ed; font-size: .75rem; line-height: 1.4; }
+    .metric strong { display: block; margin-top: 2px; font-size: .94rem; font-variant-numeric: tabular-nums; }
+    .meter { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 8px 10px; border: 1px solid #899db0; border-radius: 10px; background: linear-gradient(145deg, #596f84, #50657b); }
+    .meter { width: 100%; }
+    .meter strong { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+    .gauge-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+    .gauge-mini { display: flex; flex-direction: column; justify-content: center; gap: 12px; min-width: 0; padding: 14px 10px; border: 1px solid #899db0; border-radius: 10px; background: linear-gradient(145deg, #596f84, #50657b); }
+    .gauge-mini .gauge-label { color: #e8eef5; font-size: .76rem; font-weight: 700; }
+    .gauge-head { flex-wrap: wrap; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .gauge-percent { color: #fff; font-size: .88rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .bargraph { height: 18px; overflow: hidden; border: 1px solid #98aabd; border-radius: 5px; background: #303b4a; box-shadow: inset 0 2px 4px #11182466; }
+    .bargraph-fill { display: block; width: 0; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #718ca4, #c2d8ea); transition: width .7s ease; }
+    .bargraph-scale { display: flex; justify-content: space-between; align-items: baseline; gap: 5px; color: #d0dce7; font-size: .7rem; flex-wrap: wrap; }
+    .bargraph-scale strong { color: #fff; font-size: .8rem; font-variant-numeric: tabular-nums; }
+    .chart-card .card-head { padding-bottom: 5px; }
+    .chart-card .card-body { display: flex; flex-direction: column; padding-top: 1px; }
+    .chart-value { font-size: 1.12rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .chart-value small { color: var(--muted); font-size: .72rem; font-weight: normal; }
+    .chart { position: relative; flex: 1; height: 240px; min-height: 240px; border: 1px solid #78889b; border-radius: 9px; overflow: hidden; background: linear-gradient(#63798d, #52677c); }
+
+    .chart svg { position: relative; width: 100%; height: 100%; overflow: visible; }
+    .chart polyline { fill: none; stroke: #f7fbff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+    .chart circle { display: none; }
+    @media (max-width: 1130px) { .layout { height: auto; min-height: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); } .column { grid-template-rows: none !important; } .card { min-height: auto; } .equipment-grid { grid-template-rows: none; } .equipment { min-height: 48px; } .charts-column { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); } .charts-column > :first-child { grid-column: 1 / -1; } .chart { min-height: 165px; } }
+    @media (max-width: 700px) { .app { width: min(100% - 20px, 540px); padding-top: 12px; } .layout, .charts-column { display: grid; grid-template-columns: 1fr; } .charts-column > :first-child { grid-column: auto; } }
+    .water-temperature { grid-column: 1 / -1; }
+    .metric small { display: block; margin-top: 6px; color: var(--muted); font-size: .75rem; line-height: 1.4; }
+    .metric strong { line-height: 1.4; overflow-wrap: anywhere; }
+    .card details { font-size: .85rem; line-height: 1.5; }
+    .card summary { cursor: pointer; padding: 4px 0; }
+    #manual-status { font-size: .85rem; line-height: 1.5; margin: 8px 0 12px; }
+    #vacuum-status { margin: 0; font-size: .85rem; color: var(--muted); }
+    .field-note { margin: 6px 0; color: var(--muted); font-size: .8rem; line-height: 1.5; overflow-wrap: anywhere; }
+    .connection-note { max-width: 1550px; margin: 0 auto 12px; padding: 0 16px; color: var(--muted); text-align: center; font-size: .85rem; line-height: 1.5; }
+    @media (max-width: 420px) { .gauge-row { grid-template-columns: 1fr; } .equipment .name { font-size: .8rem; } }
+    @media (prefers-reduced-motion: reduce) { .control-button { transition: none; } }
+  .equipment:disabled { cursor: not-allowed; opacity: .65; }
+    .valve-button[data-unknown="true"]::after, .equipment[data-unknown="true"]::after { content: "—"; }
+      #manual-status, #ultimo-error { max-height: 125px; overflow: auto; flex-shrink: 0; overflow-wrap: anywhere; }
+    #ultimo-error { margin: 0 16px 8px; }
+    #screen-content { width: 100%; }
+    body { overflow-x: hidden; }
+    #emergency-panel { position: sticky; top: 0; z-index: 100; flex-wrap: wrap; }
+    #emergency-status { flex: 1 1 260px; }
+    .app { width: calc(100% - 24px); max-width: none; padding-top: 2px; }
+    .connection-note { margin-bottom: 4px; }
+    .layout { grid-template-columns: minmax(280px, 1fr) minmax(300px, 1fr) minmax(330px, 1.2fr); }
+    .column { gap: 10px; }
+    .field-note { margin: 3px 0; }
+    [aria-labelledby="flow-heading"] .card-body { gap: 6px; padding-top: 8px; padding-bottom: 8px; }
+    #manual-status, #mass-status, #mass-reading-status { max-height: 42px; overflow: auto; margin: 4px 0; font-size: .78rem; }
+    .equipment-grid { grid-auto-rows: minmax(48px, auto); gap: 6px; }
+    .metric-grid { grid-auto-rows: minmax(48px, auto); gap: 6px; }
+    .metric { padding: 5px 8px; }
+    .chart { height: clamp(170px, 25vh, 300px); min-height: 170px; }
+    @media (min-width: 1051px) { .charts-column { grid-column: auto; grid-template-columns: 1fr; } .charts-column > :first-child { grid-column: auto; } }
+    @media (min-width: 1450px) {
+      .layout { grid-template-columns: 1.15fr 1fr 1.2fr; }
+      [aria-labelledby="temp-heading"] .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .water-temperature { grid-column: auto; }
+    }
+    @media (max-width: 1050px) {
+      .layout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .charts-column { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .charts-column > :first-child { grid-column: 1 / -1; }
+    }
+    @media (max-width: 700px) {
+      .layout, .charts-column { grid-template-columns: 1fr; }
+      .charts-column { grid-column: auto; }
+      .charts-column > :first-child { grid-column: auto; }
+      .equipment { min-height: 56px; }
+      .field input { min-height: 44px; }
+      .mode-grid button, #mass-apply, .valve-button { min-height: 44px; }
+      #emergency-button { min-height: 44px; }
+    }
+    /* Distribucion de escritorio: controles en cuatro columnas, sin escalado. */
+    @media (min-width: 1100px) {
+      .layout { grid-template-columns: 1.15fr 1fr 1fr; gap: 8px; }
+      .column { display: contents; }
+      [aria-labelledby="manual-heading"] { grid-column: 1; grid-row: 1 / span 2; }
+      [aria-labelledby="flow-heading"] { grid-column: 2; grid-row: 1; }
+      [aria-labelledby="auto-heading"] { grid-column: 3; grid-row: 1; }
+      [aria-labelledby="temp-heading"] { grid-column: 1; grid-row: 3; }
+      [aria-labelledby="pressure-heading"] { grid-column: 2; grid-row: 2; }
+      [aria-labelledby="meter-heading"] { grid-column: 3; grid-row: 2; }
+      [aria-labelledby="levels-heading"] { grid-column: 1; grid-row: 4; }
+      [aria-labelledby="medium-heading"] { grid-column: 2; grid-row: 3 / span 2; }
+      [aria-labelledby="high-heading"] { grid-column: 3; grid-row: 3 / span 2; }
+      .equipment-grid { grid-template-columns: repeat(4,minmax(0,1fr)); grid-auto-rows: minmax(52px,auto); }
+      .equipment { padding: 5px 6px 23px; }
+      .equipment::after { top:auto; bottom:4px; transform:none; font-size:.6rem; padding:2px 4px; }
+      .equipment .name { font-size:.75rem; }
+      .equipment .number { font-size:.62rem; }
+      .card-head { padding:6px 0; margin-bottom:3px; }
+      h2 { font-size:.95rem; }
+      .card-body { padding:3px 10px 8px; }
+      .metric-grid, [aria-labelledby="temp-heading"] .metric-grid { grid-template-columns:repeat(3,minmax(0,1fr)); grid-auto-rows:minmax(40px,auto); }
+      .metric strong { font-size:.85rem; }
+      .metric span, .metric small { font-size:.65rem; }
+      .water-temperature { grid-column:auto; }
+      .chart { height:160px; min-height:120px; }
+      .gauge-mini { padding:8px; gap:6px; }
+      .field { margin-top:5px; }
+      .field-note { font-size:.7rem; line-height:1.3; }
+      .flow-value strong { font-size:1.3rem; }
+      .field input { height:30px; }
+      .topbar { margin-bottom:6px; }
+      h1 { font-size:1.1rem; }
+      .connection-note { font-size:.7rem; }
+      #vacuum-status { font-size:.7rem; margin:0; }
+    }
+    @media (min-width:1100px) {
+      .layout { grid-template-columns:1.1fr 1fr 1fr 1.2fr; }
+      [aria-labelledby="manual-heading"] { grid-column:1; grid-row:1 / 4; }
+      .equipment-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      [aria-labelledby="temp-heading"] { grid-column:2; grid-row:2 / 4; }
+      [aria-labelledby="temp-heading"] .metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      [aria-labelledby="pressure-heading"] { grid-column:3; grid-row:2; }
+      [aria-labelledby="meter-heading"] { grid-column:3; grid-row:3; }
+      .charts-column > [aria-labelledby="levels-heading"] { grid-column:4; grid-row:1; }
+      [aria-labelledby="medium-heading"] { grid-column:4; grid-row:2; }
+      [aria-labelledby="high-heading"] { grid-column:4; grid-row:3; }
+      .gauge-row { grid-template-columns:1fr; }
+      .chart { height:125px; min-height:100px; }
+    }
+  </style>
+</head>
+<body>
+<section id="emergency-panel" style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:#fff1f2;color:#711823;border-bottom:2px solid #b91c1c;font:14px sans-serif;">
+<button id="emergency-button" style="flex-shrink:0;background:#b91c1c;color:white;border:0;border-radius:6px;padding:12px 18px;font-weight:bold;cursor:pointer;">EMERGENCY SHUTDOWN</button>
+<p id="emergency-status" role="status" style="margin:0;max-height:54px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;">Conectando paro de software… Para controlar el equipo, abra el GUI desde main.py.</p>
+</section>
+  <div id="screen-content"><nav style="text-align:right;padding:8px"><a href="dashboard.html" style="color:white">Dashboard del reactor</a></nav>
+  <section id="startup-panel" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 12px;font:14px sans-serif">
+<button id="startup-start" disabled>Start Startup Process</button>
+<button id="startup-confirm" hidden disabled>Gas ajustado manualmente — confirmar</button>
+<div style="flex:1;min-width:220px;overflow-wrap:anywhere">
+<strong id="startup-step">Startup — consultando estado</strong>
+<div id="startup-status" role="status">Consultando startup…</div>
+<div id="startup-condition"></div>
+<div id="startup-readings"></div>
+<div id="startup-error" role="alert" style="color:#ffb4b4"></div>
+<details><summary>Ver avance de todos los pasos</summary><ol id="startup-steps" style="max-height:180px;overflow:auto;margin:6px 0"></ol></details>
+</div>
+</section>
+  <section style="padding:4px 12px;font:14px sans-serif;overflow-wrap:anywhere">
+<button id="shutdown-start" disabled>Start Shutdown Process</button>
+<button id="shutdown-confirm" hidden disabled>Válvula de inyección cerrada manualmente — confirmar</button>
+<strong id="shutdown-status" role="status">Consultando shutdown…</strong>
+<details><summary>Ver condición, lecturas y avance del shutdown</summary>
+<div id="shutdown-condition"></div><div id="shutdown-readings"></div>
+<div id="shutdown-error" role="alert" style="color:#ffb4b4"></div>
+<ol id="shutdown-steps" style="max-height:180px;overflow:auto"></ol>
+</details></section>
+  <div class="app">
+    <header class="topbar"><h1>PUPR PLASMA ENGINEERING LABORATORY REACTOR VACUUM CONTROLLER</h1></header>
+
+    <main class="layout">
+      <div class="column">
+        <section class="card" aria-labelledby="flow-heading">
+          <div class="card-head"><h2 id="flow-heading">Manual Gas Flow Control</h2></div>
+          <div class="card-body">
+            <p class="field-note">Caudal seleccionado · % del rango activo</p>
+            <div class="flow-value"><strong id="flow-percent">Sin lectura</strong></div>
+            <input id="flow-slider" disabled title="Seleccione el caudal y pulse Aplicar. Máximo disponible: 81.9 % del rango activo." type="range" min="0" max="81.9" step="0.1" value="0" aria-label="Porcentaje de flujo de gas">
+            <button id="mass-apply" class="control-button" disabled>Aplicar caudal seleccionado</button><p id="mass-status" role="status" style="font-size:.8rem;overflow-wrap:anywhere">Conectando mass flow…</p>
+            <div class="flow-path"><button class="control-button valve-button" id="main-valve" disabled title="Habilitar consigna seleccionada / enviar cero" aria-pressed="false">Main Valve</button></div>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="manual-heading">
+          <div class="card-head"><h2 id="manual-heading">Manual Control</h2></div>
+          <p id="manual-status" role="status" style="padding: 0 16px">Conectando con las placas…</p>
+          <div class="card-body equipment-grid" id="equipment-grid">
+            <button class="control-button equipment" aria-pressed="false"><span class="number">01</span><span class="name">Air Compressor</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">02</span><span class="name">Water Chiller</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">08</span><span class="name">Mechanical Pump A</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">03</span><span class="name">Booster Pump</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">09</span><span class="name">Mechanical Pump B</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">04</span><span class="name">Cool Trap A</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">10</span><span class="name">Diffusion Pump A</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">05</span><span class="name">Cool Trap B</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">11</span><span class="name">Diffusion Pump B</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">06</span><span class="name">Chamber Valve A</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">12</span><span class="name">Gate Valve A</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">07</span><span class="name">Chamber Valve B</span></button>
+            <button class="control-button equipment" aria-pressed="false"><span class="number">13</span><span class="name">Gate Valve B</span></button>
+<button class="control-button equipment" aria-pressed="false"><span class="number">14</span><span class="name">Diffuse Valve A</span></button>
+<button class="control-button equipment" aria-pressed="false"><span class="number">15</span><span class="name">Diffuse Valve B</span></button>
+<button class="control-button equipment" aria-pressed="false"><span class="number">16</span><span class="name">Microwave Cooling</span></button>
+          </div>
+        </section>
+      </div>
+
+      <div class="column">
+        <section class="card" aria-labelledby="auto-heading">
+          <div class="card-head"><h2 id="auto-heading">Automatic Vacuum</h2></div>
+          <div class="card-body">
+            <div class="mode-grid"><button class="control-button" id="auto-on" disabled title="AutoVacío pendiente: sensor de control, tolerancia y ciclo de regulación" aria-pressed="false">ON</button><button class="control-button" id="auto-off" disabled title="AutoVacío no está habilitado" aria-pressed="true">OFF</button></div>
+            <p class="field-note">AutoVacío no está habilitado. El objetivo solo ajusta las barras de progreso.</p>
+            <label class="field"><span>Desired Vacuum Level (Torr)</span><input id="vacuum-target" title="Objetivo de las barras; AutoVacio aun no habilitado" type="number" min="0.000000000001" max="760" step="any" value="0.000004"></label>
+            <label class="field"><span>Desired Mass Flow Level (sccm)</span><input id="flow-target" disabled title="Falta definir el rango en SCCM y la regulación automática" type="number" min="0" step="any" placeholder="Pendiente de configurar"></label>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="pressure-heading">
+          <div class="card-head"><h2 id="pressure-heading">Air, Coolant and Water Pressure</h2></div>
+          <div class="card-body metric-grid"><div class="metric"><span>Air</span><strong data-pressure="Air">Sin lectura</strong></div><div class="metric"><span>Coolant</span><strong data-pressure="Coolant">Sin lectura</strong></div><div class="metric"><span>Water</span><strong data-pressure="Water">Sin lectura</strong></div></div>
+        <details style="margin:0 12px 6px;max-height:90px;overflow:auto;flex-shrink:0"><summary>Estado de presiones</summary><p id="pressure-status" role="status" style="white-space:pre-line;overflow-wrap:anywhere">Conectando…</p></details></section>
+        <section class="card" aria-labelledby="meter-heading">
+          <div class="card-head"><h2 id="meter-heading">Gas Mass Flow Meter</h2></div>
+          <div class="card-body"><div class="meter"><strong id="flow-meter">Sin lectura</strong></div><p class="field-note">Caudal medido · % del rango activo. SCCM pendiente de configurar.</p><p id="mass-reading-status" class="field-note" role="status">Esperando lectura…</p></div>
+        </section>
+        <section class="card" aria-labelledby="temp-heading">
+          <div class="card-head"><h2 id="temp-heading">Temperatures</h2></div>
+          <div class="card-body metric-grid">
+            <div class="metric"><!-- Room: sensor independiente pendiente de integrar. -->
+<span>Room</span><strong>Pendiente</strong></div><div class="metric"><span>Coolant</span><strong data-temperature="Coolant">Sin lectura</strong></div>
+            <div class="metric"><span>Cool Trap A</span><strong data-temperature="Cool Trap A">Sin lectura</strong></div><div class="metric"><span>Cool Trap B</span><strong data-temperature="Cool Trap B">Sin lectura</strong></div>
+            <div class="metric"><span>Diffusion Pump A</span><strong data-temperature="Diffusion Pump A">Sin lectura</strong></div><div class="metric"><span>Diffusion Pump B</span><strong data-temperature="Diffusion Pump B">Sin lectura</strong></div>
+            <div class="metric"><span>Field Magnet A</span><strong data-temperature="Field Magnet A">Sin lectura</strong></div><div class="metric"><span>Field Magnet B</span><strong data-temperature="Field Magnet B">Sin lectura</strong></div>
+          </div>
+        <details style="margin:0 12px 8px;max-height:100px;overflow:auto;flex-shrink:0"><summary>Estado de temperaturas</summary><p id="temperature-status" role="status" style="white-space:pre-line;overflow-wrap:anywhere">Conectando…</p></details></section>
+      </div>
+
+      <div class="column charts-column">
+        <section class="card" aria-labelledby="levels-heading"><div class="card-head"><h2 id="levels-heading">Vacuum Levels</h2></div><div class="card-body gauge-row">
+          <div class="gauge-mini"><div class="gauge-head"><span class="gauge-label">Rough Manifold A</span><strong class="gauge-percent" id="rough-percent-a"></strong></div><div class="bargraph" id="rough-bar-a" role="progressbar" aria-label="Progreso hacia el vacío deseado, Rough Manifold A" aria-valuemin="0" aria-valuemax="100" aria-valuetext="Reservado para ampliacion futura"><span class="bargraph-fill"></span></div><div class="bargraph-scale"><span></span><strong id="rough-a"></strong><span id="rough-target-a"></span></div></div>
+          <div class="gauge-mini"><div class="gauge-head"><span class="gauge-label">Rough Manifold B</span><strong class="gauge-percent" id="rough-percent-b"></strong></div><div class="bargraph" id="rough-bar-b" role="progressbar" aria-label="Progreso hacia el vacío deseado, Rough Manifold B" aria-valuemin="0" aria-valuemax="100" aria-valuetext="Reservado para ampliacion futura"><span class="bargraph-fill"></span></div><div class="bargraph-scale"><span></span><strong id="rough-b"></strong><span id="rough-target-b"></span></div></div>
+        </div></section>
+        <section class="card chart-card" aria-labelledby="medium-heading"><div class="card-head"><div><h2 id="medium-heading">Medium Vacuum Gauge</h2></div><div class="chart-value" id="medium-value">Sin lectura</div></div><div class="card-body"><div class="chart"><svg viewBox="0 0 500 160" preserveAspectRatio="none" aria-label="Gráfica de vacío medio"><polyline id="medium-line" points=""></polyline><circle id="medium-dot" r="0"></circle></svg></div></div></section>
+        <section class="card chart-card" aria-labelledby="high-heading"><div class="card-head"><div><h2 id="high-heading">High Vacuum Gauge</h2></div><div class="chart-value" id="high-value">Sin lectura</div></div><div class="card-body"><div class="chart"><svg viewBox="0 0 500 160" preserveAspectRatio="none" aria-label="Gráfica de alto vacío"><polyline id="high-line" points=""></polyline><circle id="high-dot" r="0"></circle></svg></div></div></section>
+      </div>
+<p id="vacuum-status" role="status" style="grid-column:1/-1;white-space:pre-line;overflow-wrap:anywhere">Conectando lecturas de vacio…</p>
+    </main>
+  </div>
+  </div>
+
+  <script src="startup.js" defer></script>
+  <script src="masscontroll.js" defer></script>
+  <script src="manual_control.js" defer></script>
+  <script src="temperaturas.js" defer></script>
+  <script src="vacio.js" defer></script>
+  <script src="presiones.js" defer></script>
+
+  <script src="emergency.js" defer></script>
+</body>
+</html>
