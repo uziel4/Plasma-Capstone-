@@ -7,7 +7,7 @@
 - Low/Medium: Terranova 906A, ADCplate 3/S0, `P(Torr) = 10^(2V - 3)`.
 - High: Granville-Phillips 270, el del manual recibido, ADCplate 3/S1; conserva `gp270_a_torr`.
 - Medium usa ahora la formula del manual Terranova 906A, por instruccion del usuario. High conserva su conversion GP270. Falta validacion fisica.
-- Rough Manifold A/B son para otro grupo: quedan en blanco, sin lecturas activas de S2/S3.
+- Roughing Vacuum Gauges A/B (Rough Manifold A/B): ADCplate 3, S4 y S5; se muestran como barras de 0-10 V (0 V = 1e-3 Torr, 10 V = 1000 Torr). S2/S3 quedan libres.
 - Reactor Water Line Temperature es el RTD en ADC3/I0, solo para visualizar en Dashboard, sin condicionar el startup.
 - Coolant es distinto de Water. Room (lab temp) es un DS18B20 en THERMOplate address 2, puerto 9; alarma High room temperature si Room > 29 °C.
 - El startup vigente es [STARTUP_2026.md](STARTUP_2026.md): Medium para 30–1 mTorr, esperar si no se cumple una condicion o falla la lectura, y regulacion final del gas manual.
@@ -26,7 +26,7 @@ conectados al Raspberry Pi. Las pruebas del codigo no sustituyen las pruebas fis
 - Los 16 reles asignados y el control manual desde el Vacuum Controller.
 - Las lecturas de las siete termocuplas, configuradas como tipo K.
 - Las presiones de aire, coolant y agua.
-- Lecturas de vacio medio y alto. Rough Manifold A/B reservados en blanco.
+- Lecturas de vacio medio y alto. Rough Manifold A/B como barras de voltaje 0-10 V (S4/S5).
 - La temperatura Water mediante RTD con transmisor de corriente en I0: **°C = (mA - 4) * 6.25**, implementada solo para visualizacion en Dashboard.
 - El control manual del mass flow por porcentaje y su lectura de caudal.
 - Los mensajes de error para identificar problemas de lectura o comunicacion.
@@ -95,8 +95,8 @@ al cerrar main.py se ejecuta el apagado de software documentado al final.
 | Air presion | ADC 3, I3 | Conversion de 4-20 mA a 0-232 PSI |
 | Medium Vacuum | ADC 3, S0 | Terranova 906A: 10^(2V - 3) Torr |
 | High Vacuum | ADC 3, S1 | GP270, conversion nominal de voltaje negativo |
-| Rough Manifold A / B | S2 / S3 reservados | En blanco; ampliacion futura de otro grupo |
-| Caudal Aera | ADC 3, S4 | Lectura de 0-5 V como porcentaje |
+| Rough Manifold A / B | ADC 3, S4 / S5 | Barras de voltaje 0-10 V (0 V = 1e-3 Torr, 10 V = 1000 Torr) |
+| Caudal Aera | ADC 3, S6 (movido de S4) | Lectura de 0-5 V como porcentaje; deshabilitada |
 | Consigna Aera | DAQC2 4, DAC0 | Salida de 0-4.095 V, hasta 81.9% |
 
 Las presiones usan `PSI = max(0, (mA - 4) / 16 * 232)` y avisan si la corriente
@@ -207,7 +207,7 @@ En `masscontroll.py` separamos la medicion de la orden:
 
 | Funcion | Implementacion |
 |---|---|
-| Caudal medido | getADC(3, 'S4'), salida del pin 2 del Aera |
+| Caudal medido | getADC(3, 'S6'), salida del pin 2 del Aera |
 | Conversion de lectura | Porcentaje = voltaje * 20; 0-5 V equivale a 0-100% |
 | Consigna manual | Voltaje = porcentaje / 20, redondeado a 0.001 V |
 | Envio | setDAC(4, 0, voltaje), hacia pin 6 del Aera |
@@ -220,7 +220,7 @@ supuesto en SCCM. Cuando exista ese dato, el calculo previsto es
 `SCCM = porcentaje / 100 * fondo_de_escala_SCCM`.
 
 La consulta del DAC confirma el registro de salida, no el caudal. Por eso el
-GUI muestra por separado el porcentaje seleccionado y la lectura de S4.
+GUI muestra por separado el porcentaje seleccionado y la lectura de S6.
 
 #### Actualizacion de las mediciones
 
@@ -236,7 +236,7 @@ los errores acompañan al valor del canal correspondiente.
 | Reles | Permite mandar ON/OFF y consultar estado | Muestra los estados asignados en su diagrama |
 | Temperaturas | Muestra las lecturas disponibles y los pendientes | Muestra las temperaturas de su diagrama |
 | Presiones | Presenta Air, Coolant y Water en PSI | Conserva sus indicadores en bar |
-| Vacio | Lecturas y graficas de Medium/High en Torr; Rough en blanco | Indicadores de vacio en mbar |
+| Vacio | Lecturas y graficas de Medium/High en Torr; Rough A/B como barras 0-10 V | Indicadores de vacio en mbar |
 | Mass flow | Seleccion manual y caudal medido en porcentaje | No se ha añadido un indicador de mass flow |
 | AutoVacio | Regulacion automatica deshabilitada | No ejecuta automatizacion |
 | Errores | Avisos de lectura, conexion y mando | Diagnosticos y estados desconocidos |
@@ -370,7 +370,7 @@ Tenemos que definir estas dudas:
 - ¿Que hacemos con el gas y las bombas si falla el sensor o se pierde la lectura?
 - ¿Como queda el sistema cuando quitamos AutoVacio o queremos pasar a manual?
 
-Rough A/B quedan en blanco; sus barras no indican avance. AutoVacio sigue deshabilitado.
+Rough A/B muestran el voltaje 0-10 V de S4/S5; no son sensor de control de AutoVacio. AutoVacio sigue deshabilitado.
 
 ## 2. Terminar de configurar y probar el mass flow
 
@@ -380,7 +380,7 @@ con estas conexiones asignadas:
 | Funcion | Conexion |
 |---|---|
 | Mandar el caudal deseado | DAQC2plate address 4, DAC0 hacia pin 6 del Aera |
-| Leer el caudal | Pin 2 del Aera hacia S4 del ADCplate address 3 |
+| Leer el caudal | Pin 2 del Aera hacia S6 del ADCplate address 3 (movido de S4) |
 
 Main Valve representa la valvula interna del Aera. En manual aplicamos el caudal
 que seleccionamos; no estamos mandando a abrir completamente la valvula por el
@@ -622,12 +622,12 @@ la reserva propuesta en address 5. Los bloqueos generales siguen vigentes.
 
 ## Secciones reservadas para grupos futuros — estado vigente
 
-Manual Gas Flow Control, Automatic Vacuum y Vacuum Levels quedan sin
+Manual Gas Flow Control y Automatic Vacuum quedan sin
 controles activos. Se conserva el diseño original con controles deshabilitados y el frontend indica
 “No habilitado — Proximamente para grupos futuros”. No se consulta la
 consigna manual del DAC; GET/POST /api/mass-flow rechazan su uso.
 
-Gas Mass Flow Meter tambien queda deshabilitado, sin lectura periodica de S4.
+Gas Mass Flow Meter tambien queda deshabilitado, sin lectura periodica de S6 (antes S4; S4/S5 son ahora Rough A/B).
 Se conserva el diseño del medidor sin datos; la carga de masscontroll.js queda
 comentada. El frontend indica
 “No habilitado — Proximamente para grupos futuros”. La API entrega mass_flow
@@ -636,3 +636,22 @@ las condiciones de vacio del control manual de reles y startup. MassControl
 sigue disponible internamente para enviar cero durante Emergency; deshabilitar
 el panel no elimina esa accion de apagado. AutoVacio queda reservado, sin
 ciclo automatico conectado a salidas.
+
+## Roughing Vacuum Gauges A/B (Rough Manifold) — implementado
+
+Se leen por el ADCplate address 3: **Rough A en S4** y **Rough B en S5**
+(`getADC(3, 'S4')` y `getADC(3, 'S5')`), en `vacio_rough.py`. Escala del sensor:
+0 V = 0 % = 1e-3 Torr; 10 V = 100 % = 1000 Torr.
+
+- Solo se presentan como **barras de 0-10 V** en el panel Vacuum Levels del
+  Vacuum Controller: porcentaje, voltaje y los extremos 10^-3 Torr / 1000 Torr.
+  No se convierte a Torr ni se usan como lectura de control (AutoVacio, startup).
+- `/api/pressures` entrega `rough` con `volts`, `percent`, `channel` y `error`.
+- Se acepta ruido de ±0.05 V fuera de 0-10 V (la barra se limita a 0-100 %).
+  Fuera de eso: error `ROUGH_RANGE` y la barra queda en "Sin lectura".
+  Fallo de lectura: `ROUGH_READ`; valor no numerico: `ROUGH_VALUE`.
+- La lectura reservada del caudal del Aera (pin 2) se movio de **S4 a S6**
+  (`masscontroll.ADC_CHANNEL`). Sigue deshabilitada para grupos futuros.
+  S2 y S3 quedan libres.
+- Pruebas: `tests/test_rough.py`. Falta validacion fisica: cableado a S4/S5 con
+  su common y comparacion del voltaje leido con la salida del sensor.

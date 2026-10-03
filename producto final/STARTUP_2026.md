@@ -5,7 +5,7 @@
 - Low/Medium: Terranova 906A, ADCplate 3/S0, `P(Torr) = 10^(2V - 3)`.
 - High: Granville-Phillips 270, el del manual recibido, ADCplate 3/S1; conserva `gp270_a_torr`.
 - Medium usa ahora la formula del manual Terranova 906A, por instruccion del usuario. High conserva su conversion GP270. Falta validacion fisica.
-- Rough Manifold A/B son para otro grupo: quedan en blanco, sin lecturas activas de S2/S3.
+- Roughing Vacuum Gauges A/B (Rough Manifold A/B): ADCplate 3, S4 y S5; se muestran como barras de 0-10 V (0 V = 1e-3 Torr, 10 V = 1000 Torr). S2/S3 quedan libres.
 - Reactor Water Line Temperature es el RTD en ADC3/I0, solo para visualizar en Dashboard, sin condicionar el startup.
 - Coolant es distinto de Water. Room (lab temp) es un DS18B20 en THERMOplate address 2, puerto 9; alarma High room temperature si Room > 29 °C.
 - El startup vigente es [STARTUP_2026.md](STARTUP_2026.md): Medium para 30–1 mTorr, esperar si no se cumple una condicion o falla la lectura, y regulacion final del gas manual.
@@ -36,8 +36,8 @@ Este procedimiento sustituye startup 2.0 como referencia. La secuencia esta impl
 
 - Reactor Water Line Temperature es Water/RTD en ADC3/I0, solo para visualizar
   en Dashboard. No es condicion del startup.
-- Rough Manifold A/B son ampliaciones de otro grupo: indicadores en blanco,
-  sin lecturas de S2/S3 ni condiciones de avance asociadas.
+- Rough Manifold A/B: barras de voltaje 0-10 V en S4/S5, sin condiciones
+  de avance asociadas al startup.
 - Las fuentes pertenecen al proceso de plasma de otro grupo; no se incluyen
   encendido ni ajuste de potencia de microondas en este startup.
 - No trasladar los requisitos antiguos de 37.78 °C en bombas mecanicas,
@@ -61,7 +61,7 @@ La secuencia esta implementada; termina al confirmar el ajuste manual de gas.
 
 ## Cambios ya aplicados
 
-Rough A/B quedan en blanco y se retiraron de las lecturas activas. Water/RTD
+Rough A/B se muestran como barras de 0-10 V (S4/S5); no condicionan el startup. Water/RTD
 se muestra solamente en Dashboard, conservando (mA - 4) * 6.25 °C y su API.
 El mapa de reles permanece sin cambios; el startup se ejecuta solo al pulsar Start Startup Process.
 

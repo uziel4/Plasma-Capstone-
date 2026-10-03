@@ -12,7 +12,10 @@ SOLUCIONES = {
 
     'STOP_LATCHED': 'El paro esta enclavado. Revise el equipo y los errores de apagado antes de reiniciar main.py. No hay rearme desde el navegador.',
     'MFC_INPUT': 'Use una consigna numerica de 0 a 81.9%. La DAQC2 no genera 5 V; no reescalar 81.9% como 100%.',
-    'MFC_READ': 'Revise ADCplate 3/S4, pin 2 del Aera, common y alimentacion. Se esperan 0-5 V. Confirmar gas/rango para SCCM.',
+    'MFC_READ': 'Revise ADCplate 3/S6, pin 2 del Aera, common y alimentacion. Se esperan 0-5 V. Confirmar gas/rango para SCCM.',
+    'ROUGH_READ': 'Revise ADCplate address 3 y el cable del Roughing Vacuum Gauge: A en S4, B en S5, con su common.',
+    'ROUGH_VALUE': 'La placa devolvio un valor no numerico. Revise comunicacion SPI y ADCplate 3.',
+    'ROUGH_RANGE': 'Se esperan 0 a 10 V (0 V = 1e-3 Torr, 10 V = 1000 Torr). Revise alimentacion del sensor, cableado y common de S4/S5.',
     'MFC_DAC': 'Revise DAQC2plate address 4, driver piplates.DAQC2plate y DAC0. No se modifica la salida al arrancar.',
     'MFC_WRITE': 'Consigna incierta: revise DAQC2 4/DAC0 y su cable al pin 6 del Aera. Consulte de nuevo el estado. getDAC no confirma caudal ni posicion mecanica.',
     'VAC_GP270_ZERO': 'La salida es cero: revisar controlador, filamento, autorange y cableado. No mostrar cero Torr ni usar este valor en una grafica logaritmica.',

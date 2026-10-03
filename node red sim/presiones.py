@@ -25,6 +25,7 @@ def calcular_psi(current_ma, max_psi):
 
 from temperatura_agua import calcular_celsius
 from vacio import terranova906a_a_torr, gp270_a_torr
+from vacio_rough import ROUGH_SENSORES, voltaje_a_porcentaje
 class Presiones:
     def __init__(self, plant=None):
         if plant is None:
@@ -56,5 +57,17 @@ class Presiones:
             try:
                 if not error: celsius = calcular_celsius(ma)
             except Exception as exc: error = exc.payload()
-            return {'pressures':values,'vacuum':vacuum,'water_temperature':{'ma':ma,'celsius':celsius,'channel':'I0','error':error},'mass_flow':None,'timestamp':time.time(),'simulation':True}
+            rough = {}
+            # Didactico: la salida 0-10 V sigue log10 de la presion del modelo (0 V = 1e-3, 10 V = 1000 Torr).
+            model_volts = min(10.0, max(0.0, (math.log10(p.pressure)+3)/0.6))
+            for name, channel in ROUGH_SENSORES.items():
+                key = 'rough_'+name[-1].lower()+'_volts'
+                volts = p.value(key, model_volts)
+                error = p.error(key)
+                percent = None
+                try:
+                    if not error: percent = voltaje_a_porcentaje(volts)
+                except Exception as exc: error = exc.payload()
+                rough[name] = {'volts':volts,'percent':percent,'channel':channel,'error':error}
+            return {'pressures':values,'vacuum':vacuum,'rough':rough,'water_temperature':{'ma':ma,'celsius':celsius,'channel':'I0','error':error},'mass_flow':None,'timestamp':time.time(),'simulation':True}
 

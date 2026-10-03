@@ -56,7 +56,7 @@ High genera voltaje a partir de la presión del modelo usando la inversa de la f
 
 El gas manual simulado puede abrirse/cerrarse desde el panel con `gas_open`; abierto, el objetivo del modelo en alto vacío sube a 2e-5 Torr. La confirmación de gas del procedimiento sigue siendo una acción independiente del operador. `coils_on` activa calentamiento externo simulado. No representan un mass flow ni AutoVacío implementados.
 
-Manual Gas Flow Control, AutoVacío, Rough A/B y Gas Mass Flow Meter conservan su exclusión y visual deshabilitado. MassControl simulado solo atiende la orden cero interna de Emergency; no ejecuta un DAC. Room implementado (DS18B20, puerto 9).
+Manual Gas Flow Control, AutoVacío y Gas Mass Flow Meter conservan su exclusión y visual deshabilitado. Rough A/B ya se muestran (ver abajo). MassControl simulado solo atiende la orden cero interna de Emergency; no ejecuta un DAC. Room implementado (DS18B20, puerto 9).
 
 ## Permisos manuales del procedimiento de startup 2026
 
@@ -85,9 +85,19 @@ Para probarla: en el panel de simulación, botón «Room 30 °C (alarma)», o JS
 python3 test_room_alarm.py   # sin servidor
 ```
 
+## Roughing Vacuum Gauges A/B (Rough Manifold)
+
+Igual que el producto final (`vacio_rough.py`): Rough A en ADCplate 3/S4 y Rough B en S5. Se muestran solo como barras de 0-10 V en el panel Vacuum Levels (0 V = 10⁻³ Torr, 10 V = 1000 Torr). La lectura reservada del caudal del Aera pasó de S4 a S6.
+
+En la simulación, ambas barras siguen la presión del modelo con una escala logarítmica didáctica: a 760 Torr marcan unos 9.8 V. Botones del panel: «Rough A 2.5 V / B 7.5 V», «Rough A fuera de rango (11 V)» y «Fallo sensor Rough B». Campos JSON: `rough_a_volts` y `rough_b_volts`.
+
+```bash
+python3 test_rough.py   # sin servidor
+```
+
 ## Señales y fallos
 
-El panel reemplaza toda la configuración anterior en cada aplicación. «Restaurar» limpia overrides y fallos. Campos: `medium_volts`, `high_volts`, `water_ma`, `air_ma`, `coolant_ma`, `pressure_water_ma`, `Room` y nombres exactos de termocuplas, por ejemplo `Diffusion Pump A`.
+El panel reemplaza toda la configuración anterior en cada aplicación. «Restaurar» limpia overrides y fallos. Campos: `medium_volts`, `high_volts`, `water_ma`, `air_ma`, `coolant_ma`, `pressure_water_ma`, `rough_a_volts`, `rough_b_volts`, `Room` y nombres exactos de termocuplas, por ejemplo `Diffusion Pump A`.
 
 ```json
 {"overrides":{"medium_volts":0.6505149978,"Diffusion Pump A":135,"Diffusion Pump B":135},"faults":[]}

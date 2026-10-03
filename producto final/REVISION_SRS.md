@@ -77,7 +77,7 @@ La secuencia programada actualmente es:
 
 No confundir esa condición del startup con el permiso del botón manual de difusión: este último exige **P < 0.030 Torr**, estrictamente, y dato de hasta 3 segundos de antigüedad. El SRS debe explicar ambas reglas tal como están, o resolver su diferencia con el responsable del procedimiento, sin cambiarla silenciosamente.
 
-El RTD Water es monitor del agua del reactor, no una condición de temperatura del startup vigente. Rough A/B no participan. Los relés locales son 1-8 por placa; corregir diagramas que asignan “switches 10-15” como si fueran números locales.
+El RTD Water es monitor del agua del reactor, no una condición de temperatura del startup vigente. Rough A/B (S4/S5, barras 0-10 V) no participan del startup. Los relés locales son 1-8 por placa; corregir diagramas que asignan “switches 10-15” como si fueran números locales.
 
 ### Shutdown: apéndice F, pp.46-47
 
@@ -108,7 +108,7 @@ Estas propuestas describen el alcance actual; no son evidencia de validación f�
 | FR13 | Bloquear mandos manuales durante secuencias y mantener disponible Emergency. |
 | FR14 | Rechazar ON manual de difusión si Medium no es válido, reciente y menor de 0.030 Torr; permitir OFF sujeto a bloqueos generales. |
 | FR15 | Leer y graficar Medium/High independientemente; no sustituir errores por presión cero. La línea punteada es una referencia sin dato válido. |
-| FR16 | Mostrar las cuatro secciones futuras con su diseño y aviso de no habilitado, sin permitir operación ni lectura periódica del mass flow. |
+| FR16 | Mostrar las tres secciones futuras (Vacuum Levels ya muestra Rough A/B) con su diseño y aviso de no habilitado, sin permitir operación ni lectura periódica del mass flow. |
 | FR17 | Enviar apagado de software al cerrar el servidor normalmente o mediante señales manejadas; distinguirlo de cerrar una pestaña, pérdida de energía o terminación forzada. |
 
 ## Qué sigue siendo pendiente y no debe declararse terminado
@@ -152,7 +152,7 @@ Este anexo complementa la matriz anterior. Incorporar adquisición y fórmulas e
 | Medium Vacuum | ADC/3 | S0 | Voltaje, Terranova 906A | Torr / mbar |
 | High Vacuum | ADC/3 | S1 | Voltaje negativo, GP270 | Torr / mbar |
 | Room (lab temp) | THERMO/2 | 9 | DS18B20 digital, getTEMP | °C en Vacuum Controller; alarma > 29 °C |
-| Rough Manifold A/B | Reservados para futuro | — | No se adquieren | Paneles sin medición |
+| Rough Manifold A/B | ADC/3 | S4 / S5 | Voltaje 0-10 V (0 V = 1e-3 Torr, 10 V = 1000 Torr) | Barras 0-10 V en Vacuum Controller |
 
 Canal 8 de THERMO libre. I0 es el identificador de entrada del ADC; no es GPIO ni pin físico 12 del Raspberry. No deducir conexiones físicas del RTD directamente al ADC: el ADC recibe la corriente del **transmisor**.
 
@@ -367,7 +367,7 @@ Límite equivalente = 81.9 % = 4095 SCCM
 
 La escala configurada es 5000 SCCM. El módulo admite solicitudes de 10–5000 SCCM y cero para OFF, pero rechaza las superiores a 4095 por el límite de salida. No presentar 5000 SCCM como consigna alcanzable con esa salida directa. La consigna se redondea a 0.001 V y se compara con el registro DAC con tolerancia de 0.002 V; esto no comprueba el caudal físico.
 
-Conexiones reservadas: DAQC2/4 DAC0 a entrada de consigna pin 6 del Aera; salida pin 2 a ADC/3 S4. El modelo indicado más recientemente por el usuario es FC-PA780C; el comentario del módulo aún menciona FC-PA7800. Registrar esa diferencia de identificación si se conserva el diseño futuro. El comportamiento del pin 1 no está confirmado: no afirmar que llevarlo a GND cierra la válvula sin evidencia del modelo.
+Conexiones reservadas: DAQC2/4 DAC0 a entrada de consigna pin 6 del Aera; salida pin 2 a ADC/3 S6 (movida de S4). El modelo indicado más recientemente por el usuario es FC-PA780C; el comentario del módulo aún menciona FC-PA7800. Registrar esa diferencia de identificación si se conserva el diseño futuro. El comportamiento del pin 1 no está confirmado: no afirmar que llevarlo a GND cierra la válvula sin evidencia del modelo.
 
 AutoVacío reservado define, para presión P, objetivo O y tolerancia δ:
 
@@ -398,7 +398,7 @@ Presentar los siguientes como comprobaciones requeridas, no como resultados fís
 5. Verificar permiso manual de difusión con presión inferior, igual y superior a 0.030 Torr, datos vencidos y errores. Verificar que Diffuse Valve A/B no encienden en manual si falta cualquiera de Air Compressor, Water Chiller, Booster Pump o Cool Trap A/B, y que OFF sigue disponible. Verificar que Chamber Valve A/B no encienden si falta cualquiera de esos equipos o Diffuse Valve A/B. Verificar que Gate Valve A/B no encienden si falta un paso previo, si Chamber A/B están encendidas, si Medium sale de 0.001–0.030 Torr o si una Diffusion Pump sale de 250–300 °F; incluir límites exactos y lecturas vencidas.
 6. Verificar startup y shutdown por pasos con las dos temperaturas requeridas, confirmación manual del gas y tiempos de espera.
 7. Verificar que Emergency permanece accesible durante ambas secuencias y que una orden incierta no se repite automáticamente.
-8. Verificar que los cuatro paneles futuros no permiten acciones, que no se consulta S4 para caudal y que las gráficas Medium/High siguen funcionando.
+8. Verificar que los tres paneles futuros no permiten acciones, que no se consulta S6 para caudal, que Rough A/B (S4/S5) muestran 0-10 V y que las gráficas Medium/High siguen funcionando.
 9. Medir latencia y presentación en Raspberry Pi 4 de 4 GB; no declarar cumplimiento de un segundo sin resultados.
 10. Comprobar respuesta física de cada equipo por separado del registro del relé. Documentar la dependencia residual DAQC2 antes de afirmar apagado confirmado sin esa placa.
 

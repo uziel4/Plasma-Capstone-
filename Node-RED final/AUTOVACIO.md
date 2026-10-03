@@ -26,7 +26,7 @@ El porcentaje de caudal no representa la apertura mecanica de la valvula.
 - ON automatico permanece deshabilitado; falta el ciclo de regulacion.
 - `masscontroll.py` y `masscontroll.js` ya permiten mando manual y lectura del Aera.
 - Medium es Terranova 906A en ADC3/S0; High es GP270 en ADC3/S1. Se conservan las formulas confirmadas, documentadas en CONFIGURACION.md.
-- Rough A/B pertenecen a otro grupo: en blanco, sin lecturas ni barras de progreso activas.
+- Rough A/B: barras de voltaje 0-10 V en ADC3/S4 y S5. No son lectura de control de AutoVacio.
 - Los objetivos del GUI no accionan hardware. El campo automatico SCCM sigue pendiente de la escala.
 
 | Funcion | Conexion |
@@ -34,7 +34,7 @@ El porcentaje de caudal no representa la apertura mecanica de la valvula.
 | Mechanical Pump A | RELAYplate2 address 2, rele 2 |
 | Mechanical Pump B | RELAYplate2 address 2, rele 3 |
 | Consigna Aera | DAQC2 address 4, DAC0 → pin 6 |
-| Caudal Aera | Pin 2 → ADCplate address 3, S4 |
+| Caudal Aera | Pin 2 → ADCplate address 3, S6 (movido de S4) |
 
 Main Valve es la valvula interna del Aera. ON aplica la consigna seleccionada;
 OFF manda cero. No se usa un rele adicional ni apertura total forzada.
@@ -88,12 +88,12 @@ sigue sin configurar. Falta gas activo y configuracion de valvula/pin1.
 
 ## Secciones reservadas para grupos futuros — estado vigente
 
-Manual Gas Flow Control, Automatic Vacuum y Vacuum Levels quedan sin
+Manual Gas Flow Control y Automatic Vacuum quedan sin
 controles activos. Se conserva el diseño original con controles deshabilitados y el frontend indica
 “No habilitado — Proximamente para grupos futuros”. No se consulta la
 consigna manual del DAC; GET/POST /api/mass-flow rechazan su uso.
 
-Gas Mass Flow Meter tambien queda deshabilitado, sin lectura periodica de S4.
+Gas Mass Flow Meter tambien queda deshabilitado, sin lectura periodica de S6 (antes S4; S4/S5 son ahora Rough A/B).
 Se conserva el diseño del medidor sin datos; la carga de masscontroll.js queda
 comentada. El frontend indica
 “No habilitado — Proximamente para grupos futuros”. La API entrega mass_flow

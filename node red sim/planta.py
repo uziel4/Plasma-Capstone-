@@ -72,7 +72,7 @@ class Planta:
         return {'code': 'SIM_SENSOR', 'error': 'Fallo simulado: '+name} if name in self.faults else None
 
     def configure(self, data):
-        allowed = {'medium_volts', 'high_volts', 'water_ma', 'air_ma', 'coolant_ma', 'pressure_water_ma', *TERMOCUPLAS, ROOM_SENSOR[0]}
+        allowed = {'medium_volts', 'high_volts', 'water_ma', 'air_ma', 'coolant_ma', 'pressure_water_ma', 'rough_a_volts', 'rough_b_volts', *TERMOCUPLAS, ROOM_SENSOR[0]}
         if not isinstance(data, dict) or set(data)-{'overrides', 'faults', 'gas_open', 'coils_on'}:
             raise ValueError('Use overrides y faults')
         overrides = data.get('overrides', {})

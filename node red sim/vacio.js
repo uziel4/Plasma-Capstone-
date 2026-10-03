@@ -37,6 +37,19 @@
   }
   chart('medium', null, false);
   chart('high', null, false);
+  // Roughing Vacuum Gauges A/B (S4/S5): solo voltaje 0-10 V como barra; no se convierte a Torr.
+  function rough(id, entry) {
+    const bar = document.querySelector(`#rough-bar-${id}`), fill = bar.querySelector('.bargraph-fill');
+    const percent = document.querySelector(`#rough-percent-${id}`), volts = document.querySelector(`#rough-${id}`);
+    const valid = entry && !entry.error && Number.isFinite(entry.volts) && Number.isFinite(entry.percent);
+    fill.style.width = valid ? `${entry.percent}%` : '0%';
+    percent.textContent = valid ? `${entry.percent.toFixed(1)} %` : '—';
+    volts.textContent = valid ? `${entry.volts.toFixed(2)} V` : 'Sin lectura';
+    bar.setAttribute('aria-valuenow', valid ? entry.percent.toFixed(1) : '0');
+    bar.setAttribute('aria-valuetext', valid ? `${entry.volts.toFixed(2)} V, ${entry.percent.toFixed(1)} %` : 'Sin lectura');
+    bar.title = valid ? `${entry.channel}: ${entry.volts.toFixed(3)} V` : entry?.error?.error || 'Sin lectura';
+    return valid ? null : `Rough ${id.toUpperCase()}: ${entry?.error?.error || 'Sin lectura'}`;
+  }
   window.addEventListener('adc-readings', event => {
     const data = event.detail;
     const readings = data?.vacuum || {};
@@ -44,6 +57,8 @@
     chart('medium', readings['Medium Vacuum'], fresh);
     chart('high', readings['High Vacuum'], fresh);
 
+    const roughErrors = [rough('a', data?.rough?.['Rough Manifold A']), rough('b', data?.rough?.['Rough Manifold B'])].filter(Boolean);
+    document.querySelector('#rough-status').textContent = !data ? 'Sin comunicacion con ADCplate.' : roughErrors.length ? roughErrors.join('\n') : 'S4 (A) y S5 (B): 0–10 V.';
     timestamp = data?.timestamp ?? null;
     const errors = Object.values(readings).filter(e => e.error).map(e => e.error.error);
     status.textContent = !data ? 'Sin comunicacion con ADCplate. Revise main.py y Estado de presiones.'

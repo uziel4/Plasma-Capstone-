@@ -1,4 +1,4 @@
-"""Aera analogico: ADC3/S4 lectura, DAQC2 4/DAC0 consigna.
+"""Aera analogico: ADC3/S6 lectura, DAQC2 4/DAC0 consigna. S4/S5 son de Rough A/B.
 
 No escribe al arrancar. El pin 1 de override debe estar en modo normal.
 Cero consigna no confirma cierre mecanico ni es un aislamiento de gas.
@@ -11,7 +11,7 @@ from errores import ControlError
 
 DAC_ADDRESS = 4
 DAC_CHANNEL = 0
-ADC_CHANNEL = 'S4'
+ADC_CHANNEL = 'S6'  # Movido de S4: S4/S5 pasan a Roughing Vacuum Gauges A/B
 MAX_VOLTS = 4.095
 MAX_PERCENT = round(MAX_VOLTS * 20, 1)
 FULL_SCALE_SCCM = 5000.0  # Escala solicitada para FC-PA7800.

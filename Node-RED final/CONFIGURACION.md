@@ -7,7 +7,7 @@
 - Low/Medium: Terranova 906A, ADCplate 3/S0, `P(Torr) = 10^(2V - 3)`.
 - High: Granville-Phillips 270, el del manual recibido, ADCplate 3/S1; conserva `gp270_a_torr`.
 - Medium usa ahora la formula del manual Terranova 906A, por instruccion del usuario. High conserva su conversion GP270. Falta validacion fisica.
-- Rough Manifold A/B son para otro grupo: quedan en blanco, sin lecturas activas de S2/S3.
+- Roughing Vacuum Gauges A/B (Rough Manifold A/B): ADCplate 3, S4 y S5; se muestran como barras de 0-10 V (0 V = 1e-3 Torr, 10 V = 1000 Torr). S2/S3 quedan libres.
 - Reactor Water Line Temperature es el RTD en ADC3/I0, solo para visualizar en Dashboard, sin condicionar el startup.
 - Coolant es distinto de Water. Room (lab temp) es un DS18B20 en THERMOplate address 2, puerto 9; alarma High room temperature si Room > 29 °C.
 - El startup vigente es [STARTUP_2026.md](STARTUP_2026.md): Medium para 30–1 mTorr, esperar si no se cumple una condicion o falla la lectura, y regulacion final del gas manual.
@@ -208,7 +208,7 @@ Medium usa Terranova 906A con la formula confirmada; High usa GP270. Las convers
 - RTD Water: ADC3/I0 (indice 12), salida del transmisor 4–20 mA. Formula `(mA - 4) * 6.25` °C; 4 mA = 0 °C y 20 mA = 100 °C. Solo Dashboard.
 - Presion Water: ADC3/I1 (indice 13), igual conversion que Air: 4–20 mA a 0–232 PSI.
 - Los indices no son pines GPIO. Coolant conserva su termocupla en THERMO2/canal1.
-- Medium: Terranova 906A en S0. High: GP270 en S1. S2/S3 reservados, sin lecturas.
+- Medium: Terranova 906A en S0. High: GP270 en S1. Rough A/B en S4/S5, barras de 0-10 V. S2/S3 libres.
 
 ### Errores de agua y conversion de vacio
 
@@ -232,11 +232,11 @@ VAC_READ, VAC_VALUE y VAC_RANGE se muestran en el GUI y registran en logs/contro
 | Medium Vacuum | 3 | S0 | 10^(2V - 3) Torr |
 | High Vacuum | 3 | S1 | GP270: salida negativa por tramos, Torr nominal |
 
-Conectar la salida analogica de voltaje de cada controlador a su entrada S y su retorno analogico a la referencia GND de ADCplate, conforme al pinout de su controlador. No se conecta la sonda directamente como si fuera una termocupla. Los numeros de pin del conector del controlador dependen de su modelo y no se han asignado aqui. S4 lee caudal Aera; S5–S7 libres. S2/S3 reservados para otro grupo.
+Conectar la salida analogica de voltaje de cada controlador a su entrada S y su retorno analogico a la referencia GND de ADCplate, conforme al pinout de su controlador. No se conecta la sonda directamente como si fuera una termocupla. Los numeros de pin del conector del controlador dependen de su modelo y no se han asignado aqui. S4 y S5 leen Rough A y Rough B (0-10 V); S6 queda reservado para el caudal Aera; S2, S3 y S7 libres.
 
 `vacio.py` contiene SENSORES y la conversion por sensor. Para cambiar un sensor, actualizar su canal/modelo y los parametros que corresponden a su conversion (pendiente/offset para Terranova 906A); si el nuevo sensor usa una ley distinta, adaptar la conversion antes de utilizarlo. Rough A/B no forman parte del mapa activo.
 
-La ADC se inicializa una sola vez desde presiones.py; vacio reutiliza el mismo driver y bloqueo SPI. /api/pressures entrega tambien vacuum y presiones.js comparte la respuesta con vacio.js, sin otra consulta ni reset. El GUI muestra Torr y voltaje en el tooltip. Graficas: ultimas 60 muestras disponibles, eje vertical logaritmico autoajustado, sin datos inventados. Al fallar una lectura se elimina su traza actual; no se dibujan puentes sobre muestras invalidas. Rough A/B permanecen en blanco, sin progreso calculado ni lecturas activas.
+La ADC se inicializa una sola vez desde presiones.py; vacio reutiliza el mismo driver y bloqueo SPI. /api/pressures entrega tambien vacuum y presiones.js comparte la respuesta con vacio.js, sin otra consulta ni reset. El GUI muestra Torr y voltaje en el tooltip. Graficas: ultimas 60 muestras disponibles, eje vertical logaritmico autoajustado, sin datos inventados. Al fallar una lectura se elimina su traza actual; no se dibujan puentes sobre muestras invalidas. Rough A/B (S4/S5) se muestran como barras de 0-10 V con su voltaje; /api/pressures los entrega en `rough`.
 
 VAC_READ: revisar placa, entrada S, controlador y retorno analogico. VAC_VALUE: respuesta no numerica/finita. VAC_RANGE: conversion no representable. Estas comprobaciones no detectan todos los fallos: un cable flotante o un controlador en fallo puede entregar un voltaje numericamente plausible. High GP270 incorpora errores VAC_GP270_STATE, VAC_GP270_RANGE y VAC_GP270_ZERO; Medium no incorpora deteccion especifica de estados del controlador. Verificar lecturas fisicamente al conectar.
 
@@ -271,7 +271,7 @@ Documento detallado: [AUTOVACIO.md](AUTOVACIO.md), con reglas, conexiones, estad
 
 `autovacio.py` separa las reglas de control. Las bombas mecanicas A/B (address 2, reles 2/3) deben permanecer encendidas durante AutoVacio, incluso al alcanzar el objetivo. Si la presion es menor al objetivo menos tolerancia, abrir mas el mass flow; si es mayor al objetivo mas tolerancia, cerrar mas; dentro de la banda, mantener. Abrir admite gas y aumenta la presion. Las reglas no accionan hardware todavia.
 
-Los indicadores Rough A/B quedan en blanco. AutoVacio no tiene ciclo automatico integrado y ON sigue deshabilitado. El mass flow manual si esta implementado; faltan integracion del ciclo, tolerancia, limites y estrategia para el modo automatico. El startup termina en regulacion manual.
+Los indicadores Rough A/B muestran el voltaje 0-10 V de S4/S5; no se usan como lectura de control. AutoVacio no tiene ciclo automatico integrado y ON sigue deshabilitado. El mass flow manual si esta implementado; faltan integracion del ciclo, tolerancia, limites y estrategia para el modo automatico. El startup termina en regulacion manual.
 
 AUTO_CONFIG: completar esas integraciones antes de activar. AUTO_VALUE: datos no finitos o fuera de rango; no calcular acciones con esos datos. Falta definir tambien la reaccion del controlador ante perdida de sensor y la transicion al salir de AutoVacio.
 
@@ -357,7 +357,7 @@ Consigna: V_pin6 = 5 * Q_objetivo_sccm / fondo_escala_sccm.
 Si la etiqueta usa SLM, convertir a SCCM multiplicando por 1000.
 El porcentaje representa caudal respecto al fondo de escala, no posicion de valvula.
 
-La lectura esta asignada a ADCplate address 3, S4, desde DB9 pin 2.
+La lectura esta asignada a ADCplate address 3, S6, desde DB9 pin 2 (movida de S4 el 3 de octubre de 2026; S4/S5 son Rough A/B).
 El usuario asigno DAQC2plate address 4 para generar la consigna analogica.
 DAC0 integrado; falta confirmar fuente bipolar +/-15 V y cableado. No conectar
 +/-15 V a GPIO del Raspberry Pi. La alimentacion ±15 V la prepara el equipo del usuario; falta comprobar el montaje fisico.
@@ -387,7 +387,7 @@ no aplicarlo a DeviceNet. Mass flow manual integrado; AutoVacio sigue sin habili
 
 - `masscontroll.py`: conversion porcentual, lectura ADC y escritura DAQC2 con
   consulta getDAC posterior. `masscontroll.js`: seleccion y aplicacion manual.
-- Aera DB9 pin 2 -> ADCplate 3/S4; pin 6 <- DAQC2plate 4/DAC0.
+- Aera DB9 pin 2 -> ADCplate 3/S6; pin 6 <- DAQC2plate 4/DAC0.
   Common analogico compartido segun cableado del equipo; fuente +/-15 V externa.
 - DAQC2 setDAC admite 0-4.095 V, no 5 V. Consigna maxima directa: 81.9% FS.
   Fuente: https://pi-plates.com/downloads/DAQC2plate%20Reference%20Guide.pdf
@@ -398,14 +398,14 @@ no aplicarlo a DeviceNet. Mass flow manual integrado; AutoVacio sigue sin habili
   debe estar en modo de regulacion normal; el programa no lo acciona.
 - Al iniciar no se escriben salidas. Al cerrar main.py se intenta consigna cero y OFF en los 16 reles. Cerrar la pestaña no cierra el servidor. No hay regulacion automatica.
 - getDAC confirma registro de consigna, no voltaje medido en el borne ni caudal.
-  Caudal se lee aparte desde S4; un voltaje plausible no detecta desconexion.
+  Caudal se lee aparte desde S6; un voltaje plausible no detecta desconexion.
 - `FULL_SCALE_SCCM=None`: no inventar rango. Meter muestra % FS; solo configurar
   SCCM tras confirmar el rango activo del gas. Lectura 0-5 V = 0-100% FS.
 - GET `/api/mass-flow`: registro DAC. POST: `{"percent":50}`; mismas restricciones
   de origen/JSON que reles. `/api/pressures` incluye `mass_flow` (lectura).
 - MFC_INPUT: usar 0-81.9%. MFC_DAC: revisar placa4/driver/DAC0.
   MFC_WRITE: orden incierta, consultar antes de repetir; no reintento automatico.
-  MFC_READ: revisar ADC3/S4, pin2 y alimentacion; no convertir fallo a caudal cero.
+  MFC_READ: revisar ADC3/S6, pin2 y alimentacion; no convertir fallo a caudal cero.
 - Pruebas de software aisladas en tests/test_masscontroll.py. Pruebas fisicas
   de voltaje, caudal y regulacion pendientes. AutoVacio permanece bloqueado.
 
@@ -602,12 +602,12 @@ por editar este mapa. THERMOplate sigue en 2, ADCplate en 3 y DAQC2plate en 4.
 
 ## Secciones reservadas para grupos futuros — estado vigente
 
-Manual Gas Flow Control, Automatic Vacuum y Vacuum Levels quedan sin
+Manual Gas Flow Control y Automatic Vacuum quedan sin
 controles activos. Se conserva el diseño original con controles deshabilitados y el frontend indica
 “No habilitado — Proximamente para grupos futuros”. No se consulta la
 consigna manual del DAC; GET/POST /api/mass-flow rechazan su uso.
 
-Gas Mass Flow Meter tambien queda deshabilitado, sin lectura periodica de S4.
+Gas Mass Flow Meter tambien queda deshabilitado, sin lectura periodica de S6 (antes S4; S4/S5 son ahora Rough A/B).
 Se conserva el diseño del medidor sin datos; la carga de masscontroll.js queda
 comentada. El frontend indica
 “No habilitado — Proximamente para grupos futuros”. La API entrega mass_flow
@@ -645,3 +645,22 @@ cuando Room es **mayor de 29 °C** (29.0 exacto no la activa):
 
 Pruebas: `tests/test_room_alarm.py` (lectura del puerto 9, rango, limite de
 29 °C, banda de 28 °C, encendido/apagado del Buzzer, lectura invalida y Emergency).
+
+## Roughing Vacuum Gauges A/B (Rough Manifold) — implementado
+
+Se leen por el ADCplate address 3: **Rough A en S4** y **Rough B en S5**
+(`getADC(3, 'S4')` y `getADC(3, 'S5')`), en `vacio_rough.py`. Escala del sensor:
+0 V = 0 % = 1e-3 Torr; 10 V = 100 % = 1000 Torr.
+
+- Solo se presentan como **barras de 0-10 V** en el panel Vacuum Levels del
+  Vacuum Controller: porcentaje, voltaje y los extremos 10^-3 Torr / 1000 Torr.
+  No se convierte a Torr ni se usan como lectura de control (AutoVacio, startup).
+- `/api/pressures` entrega `rough` con `volts`, `percent`, `channel` y `error`.
+- Se acepta ruido de ±0.05 V fuera de 0-10 V (la barra se limita a 0-100 %).
+  Fuera de eso: error `ROUGH_RANGE` y la barra queda en "Sin lectura".
+  Fallo de lectura: `ROUGH_READ`; valor no numerico: `ROUGH_VALUE`.
+- La lectura reservada del caudal del Aera (pin 2) se movio de **S4 a S6**
+  (`masscontroll.ADC_CHANNEL`). Sigue deshabilitada para grupos futuros.
+  S2 y S3 quedan libres.
+- Pruebas: `tests/test_rough.py`. Falta validacion fisica: cableado a S4/S5 con
+  su common y comparacion del voltaje leido con la salida del sensor.

@@ -7,7 +7,7 @@
 - Low/Medium: Terranova 906A, ADCplate 3/S0, `P(Torr) = 10^(2V - 3)`.
 - High: Granville-Phillips 270, el del manual recibido, ADCplate 3/S1; conserva `gp270_a_torr`.
 - Medium usa ahora la formula del manual Terranova 906A, por instruccion del usuario. High conserva su conversion GP270. Falta validacion fisica.
-- Rough Manifold A/B son para otro grupo: quedan en blanco, sin lecturas activas de S2/S3.
+- Roughing Vacuum Gauges A/B (Rough Manifold A/B): ADCplate 3, S4 y S5; se muestran como barras de 0-10 V (0 V = 1e-3 Torr, 10 V = 1000 Torr). S2/S3 quedan libres.
 - Reactor Water Line Temperature es el RTD en ADC3/I0, solo para visualizar en Dashboard, sin condicionar el startup.
 - Coolant es distinto de Water. Room (lab temp) es un DS18B20 en THERMOplate address 2, puerto 9; alarma High room temperature si Room > 29 °C.
 - El startup vigente es [STARTUP_2026.md](STARTUP_2026.md): Medium para 30–1 mTorr, esperar si no se cumple una condicion o falla la lectura, y regulacion final del gas manual.
@@ -100,8 +100,10 @@ No confundir indice 12 con pin fisico 12 del Raspberry.
 |---|---|---|---|
 | Medium Vacuum, salida analogica de presion | S0 | Retorno analogico del controlador a referencia ADC | Terranova 906A, 10^(2V-3) Torr |
 | High Vacuum GP270, salida Pressure | S1 | Retorno analogico del GP270 a referencia ADC | Negativa 0 a -5 V, nominal por tramos |
-| Aera, DB9 pin 2 OUTPUT | S4 | COMMON analogico del Aera a referencia ADC | 0-5 V = 0-100% del rango activo |
-| Libre | S5, S6, S7 | — | Sin asignacion |
+| Aera, DB9 pin 2 OUTPUT | S6 (movido de S4) | COMMON analogico del Aera a referencia ADC | 0-5 V = 0-100% del rango activo |
+| Roughing Vacuum Gauge A (Rough Manifold A) | S4 | Common del sensor a referencia ADC | 0-10 V = 1e-3 a 1000 Torr; barra 0-10 V |
+| Roughing Vacuum Gauge B (Rough Manifold B) | S5 | Common del sensor a referencia ADC | 0-10 V = 1e-3 a 1000 Torr; barra 0-10 V |
+| Libre | S2, S3, S7 | — | Sin asignacion |
 
 **HAY DUDA:** pines exactos de salida/retorno en los conectores de los controladores
 de vacio; no estan confirmados en este mapa. En GP270 usar salida Pressure,
@@ -118,7 +120,7 @@ el Raspberry ni la salida DAC. El mapa siguiente corresponde a la version
 | Pin DB9 Aera | Funcion | Conexion prevista / estado |
 |---|---|---|
 | 1 | VALVE OPEN/CLOSED, forzado | Se requiere valvula cerrada al inicio. Falta confirmar la señal electrica de cierre y como liberar el forzado para regular; programa no lo acciona |
-| 2 | OUTPUT 0-5 V | ADCplate address 3, S4; caudal medido |
+| 2 | OUTPUT 0-5 V | ADCplate address 3, S6; caudal medido (movido de S4) |
 | 3 | +15 VDC | Fuente externa preparada por ustedes |
 | 4 | COMMON GND | Comun de alimentacion (0 V), confirmado por el usuario; no es -15 V |
 | 5 | -15 VDC | Fuente externa preparada por ustedes; no confundir con 0 V |
@@ -159,7 +161,7 @@ esos datos. Multigas no significa que detecta automaticamente el gas.
 | errores.py | Diagnosticos; no tiene cableado |
 | presiones.py | Usa entradas I1-I3 y coordina lecturas ADC |
 | temperatura_agua.py | Usa I0; (mA - 4) * 6.25 °C, solo Dashboard |
-| vacio.py | Usa S0/S1; S2/S3 reservados |
+| vacio.py / vacio_rough.py | S0/S1 Medium/High; S4/S5 Rough A/B (0-10 V); S2/S3 libres |
 | temperaturas.py | Usa THERMOplate canales 1-7 |
 | autovacio.py | Reglas pendientes de automatizacion; reutilizara sensores y mass flow |
 | HTML y JavaScript | Interfaz; no conectar GPIO desde el navegador |
@@ -287,12 +289,12 @@ por editar este mapa. THERMOplate sigue en 2, ADCplate en 3 y DAQC2plate en 4.
 
 ## Secciones reservadas para grupos futuros — estado vigente
 
-Manual Gas Flow Control, Automatic Vacuum y Vacuum Levels quedan sin
+Manual Gas Flow Control y Automatic Vacuum quedan sin
 controles activos. Se conserva el diseño original con controles deshabilitados y el frontend indica
 “No habilitado — Proximamente para grupos futuros”. No se consulta la
 consigna manual del DAC; GET/POST /api/mass-flow rechazan su uso.
 
-Gas Mass Flow Meter tambien queda deshabilitado, sin lectura periodica de S4.
+Gas Mass Flow Meter tambien queda deshabilitado, sin lectura periodica de S6 (antes S4; S4/S5 son ahora Rough A/B).
 Se conserva el diseño del medidor sin datos; la carga de masscontroll.js queda
 comentada. El frontend indica
 “No habilitado — Proximamente para grupos futuros”. La API entrega mass_flow
@@ -301,3 +303,22 @@ las condiciones de vacio del control manual de reles y startup. MassControl
 sigue disponible internamente para enviar cero durante Emergency; deshabilitar
 el panel no elimina esa accion de apagado. AutoVacio queda reservado, sin
 ciclo automatico conectado a salidas.
+
+## Roughing Vacuum Gauges A/B (Rough Manifold) — implementado
+
+Se leen por el ADCplate address 3: **Rough A en S4** y **Rough B en S5**
+(`getADC(3, 'S4')` y `getADC(3, 'S5')`), en `vacio_rough.py`. Escala del sensor:
+0 V = 0 % = 1e-3 Torr; 10 V = 100 % = 1000 Torr.
+
+- Solo se presentan como **barras de 0-10 V** en el panel Vacuum Levels del
+  Vacuum Controller: porcentaje, voltaje y los extremos 10^-3 Torr / 1000 Torr.
+  No se convierte a Torr ni se usan como lectura de control (AutoVacio, startup).
+- `/api/pressures` entrega `rough` con `volts`, `percent`, `channel` y `error`.
+- Se acepta ruido de ±0.05 V fuera de 0-10 V (la barra se limita a 0-100 %).
+  Fuera de eso: error `ROUGH_RANGE` y la barra queda en "Sin lectura".
+  Fallo de lectura: `ROUGH_READ`; valor no numerico: `ROUGH_VALUE`.
+- La lectura reservada del caudal del Aera (pin 2) se movio de **S4 a S6**
+  (`masscontroll.ADC_CHANNEL`). Sigue deshabilitada para grupos futuros.
+  S2 y S3 quedan libres.
+- Pruebas: `tests/test_rough.py`. Falta validacion fisica: cableado a S4/S5 con
+  su common y comparacion del voltaje leido con la salida del sensor.

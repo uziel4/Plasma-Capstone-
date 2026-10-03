@@ -30,6 +30,9 @@ SIM_BUTTONS = [
     ('Apagar coils externos', {'coils_on': False}),
     ('Room 30 °C (alarma)', {'overrides': {'Room': 30}, 'faults': []}),
     ('Fallo sensor Room', {'overrides': {}, 'faults': ['Room']}),
+    ('Rough A 2.5 V / B 7.5 V', {'overrides': {'rough_a_volts': 2.5, 'rough_b_volts': 7.5}, 'faults': []}),
+    ('Rough A fuera de rango (11 V)', {'overrides': {'rough_a_volts': 11}, 'faults': []}),
+    ('Fallo sensor Rough B', {'overrides': {}, 'faults': ['rough_b_volts']}),
 ]
 SIM_CSS = """:root{font:18px system-ui;background:#283044;color:white;max-width:850px;margin:30px auto;padding:15px}
 button,textarea{font:inherit;margin:8px;padding:10px}button{cursor:pointer}textarea{width:90%;height:160px}

@@ -7,6 +7,7 @@ from hardware_bus import SPI_LOCK
 from errores import ControlError
 from temperatura_agua import leer_corriente
 from vacio import leer_vacios
+from vacio_rough import leer_rough
 # from masscontroll import leer_flujo  # Proximamente para grupos futuros.
 
 ADC_ADDRESS = 3
@@ -98,6 +99,15 @@ class Presiones:
                 elif not message and name in self.errors:
                     logging.info('Lectura de vacio recuperada: %s', name)
                     del self.errors[name]
-            self.cache = {'pressures': values, 'water_temperature': water, 'vacuum': vacuum, 'mass_flow': None, 'timestamp': time.time()}
+            rough = leer_rough(self.driver, self.init_error)
+            for name, entry in rough.items():
+                message = entry['error']['error'] if entry['error'] else None
+                if message and self.errors.get(name) != message:
+                    logging.error('%s', message)
+                    self.errors[name] = message
+                elif not message and name in self.errors:
+                    logging.info('Lectura Rough recuperada: %s', name)
+                    del self.errors[name]
+            self.cache = {'pressures': values, 'water_temperature': water, 'vacuum': vacuum, 'rough': rough, 'mass_flow': None, 'timestamp': time.time()}
             self.next_read = time.monotonic() + 1
             return self.cache
