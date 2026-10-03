@@ -1,0 +1,1 @@
+{"name":"plasma-node-red-sim","version":"1.0.0","private":true,"scripts":{"start":"node launch.js"},"dependencies":{"@flowfuse/node-red-dashboard":"^1.32.0","express":"^4.21.2","node-red":"^4.1.0"},"devDependencies":{"socket.io-client":"^4.8.4"}}

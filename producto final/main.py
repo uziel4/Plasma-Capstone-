@@ -16,13 +16,15 @@ from masscontroll import MassControl
 from emergency_shutdown import EmergencyShutdown
 from startup import Startup
 from shutdown import Shutdown
+from alarma_room import RoomAlarm
 
 ROOT = Path(__file__).resolve().parent
 
 
-def handler_for(control, temperatures, pressures, mass=None, emergency=None):
+def handler_for(control, temperatures, pressures, mass=None, emergency=None, alarm=None):
     mass = mass or MassControl()
     emergency = emergency or EmergencyShutdown(control, mass)
+    alarm = alarm or RoomAlarm(control, temperatures, emergency)
     startup = Startup(control, temperatures, pressures, emergency)
     shutdown = Shutdown(control, temperatures, pressures, emergency, startup)
     class Handler(BaseHTTPRequestHandler):
@@ -53,7 +55,7 @@ def handler_for(control, temperatures, pressures, mass=None, emergency=None):
                 return
             if self.path == '/api/mass-flow':
                 try:
-                    self.reply(200, mass.state())
+                    raise ControlError('INPUT', 'Manual Gas Flow Control no habilitado; proximamente para grupos futuros')
                 except Exception as exc:
                     self.failure(503, exc)
                 return
@@ -65,13 +67,13 @@ def handler_for(control, temperatures, pressures, mass=None, emergency=None):
                 return
             if self.path == '/api/temperatures':
                 try:
-                    self.reply(200, temperatures.read())
+                    self.reply(200, {**temperatures.read(), 'room_alarm': alarm.state()})
                 except Exception as exc:
                     self.failure(503, exc)
                 return
             if self.path == '/api/relays':
                 try:
-                    self.reply(200, control.states())
+                    self.reply(200, control.manual_states(pressures.read(), temperatures.read()))
                 except Exception as exc:
                     self.failure(503, exc)
                 return
@@ -117,13 +119,17 @@ def handler_for(control, temperatures, pressures, mass=None, emergency=None):
                         raise ValueError('Se requiere objeto vacio')
                     result = shutdown.manual(lambda: startup.start()) if self.path == '/api/startup' else shutdown.manual(lambda: startup.confirm_gas())
                 elif self.path == '/api/mass-flow':
-                    if not isinstance(data, dict) or set(data) != {'percent'}:
-                        raise ValueError('Se requiere percent')
-                    result = shutdown.manual(lambda: startup.manual(lambda: mass.set_percent(data['percent'])))
+                    if not isinstance(data, dict) or set(data) not in ({'percent'}, {'sccm'}):
+                        raise ValueError('Se requiere percent o sccm')
+                    # Consigna manual deshabilitada; conservar MassControl para Emergency.
+                    # Futuro: mass.set_sccm(data['sccm'])
+                    def unavailable():
+                        raise ControlError('INPUT', 'Manual Gas Flow Control no habilitado; proximamente para grupos futuros')
+                    result = shutdown.manual(lambda: startup.manual(unavailable))
                 else:
                     if not isinstance(data, dict) or set(data) != {'name', 'on'} or not isinstance(data['name'], str):
                         raise ValueError('Se requiere name y on')
-                    result = shutdown.manual(lambda: startup.manual(lambda: control.set_relay(data['name'], data['on'])))
+                    result = shutdown.manual(lambda: startup.manual(lambda: control.set_manual_relay(data['name'], data['on'], pressures.read, temperatures.read)))
 
             except ControlError as exc:
                 self.failure(400 if exc.code == 'INPUT' else 503, exc)
@@ -155,7 +161,9 @@ if __name__ == '__main__':
         mass = MassControl()
         emergency = EmergencyShutdown(control, mass)
         try:
-            server = ThreadingHTTPServer(('127.0.0.1', args.port), handler_for(control, Temperaturas(), Presiones(), mass, emergency))
+            temperatures = Temperaturas()
+            alarm = RoomAlarm(control, temperatures, emergency)
+            server = ThreadingHTTPServer(('127.0.0.1', args.port), handler_for(control, temperatures, Presiones(), mass, emergency, alarm))
         except OSError as exc:
             raise ControlError('SERVER_BIND', 'No se pudo abrir el servidor', repr(exc), puerto=args.port) from exc
     except Exception as exc:
@@ -164,6 +172,7 @@ if __name__ == '__main__':
             emergency.stop('Fallo de arranque del servidor')
         logging.exception('%s', error)
         raise SystemExit(1)
+    alarm.start()  # Revisa Room cada 2 s aunque no haya un GUI abierto
     url = f"http://127.0.0.1:{args.port}"
     print(f"{url} | Control de reles conectado", flush=True)
     def abrir_gui():
