@@ -1,0 +1,108 @@
+[
+  {
+    "id": "sim",
+    "type": "tab",
+    "label": "API Python SIMULADA",
+    "disabled": false,
+    "info": "Backend fijo localhost:8001. No apunta al servidor real."
+  },
+  {
+    "id": "get",
+    "type": "http in",
+    "z": "sim",
+    "name": "GET API simulada",
+    "url": "/api/*",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 100,
+    "wires": [
+      [
+        "route"
+      ]
+    ]
+  },
+  {
+    "id": "post",
+    "type": "http in",
+    "z": "sim",
+    "name": "POST API simulada",
+    "url": "/api/*",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 180,
+    "wires": [
+      [
+        "route"
+      ]
+    ]
+  },
+  {
+    "id": "route",
+    "type": "function",
+    "z": "sim",
+    "name": "Destino fijo SIM / quitar Origin externo",
+    "func": "msg.url = 'http://127.0.0.1:8001' + msg.req.originalUrl; msg.method = msg.req.method; msg.headers = {'content-type':'application/json'}; if(msg.method==='POST') msg.payload=JSON.stringify(msg.payload); return msg;",
+    "outputs": 1,
+    "x": 450,
+    "y": 120,
+    "wires": [
+      [
+        "request"
+      ]
+    ]
+  },
+  {
+    "id": "request",
+    "type": "http request",
+    "z": "sim",
+    "name": "Python simulado",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "persist": false,
+    "insecureHTTPParser": false,
+    "senderr": false,
+    "headers": [],
+    "x": 690,
+    "y": 120,
+    "wires": [
+      [
+        "check"
+      ]
+    ]
+  },
+  {
+    "id": "check",
+    "type": "function",
+    "z": "sim",
+    "name": "Sin respuesta de main.py → 502",
+    "func": "if (typeof msg.statusCode !== 'number') {\n    const detail = String(msg.statusCode || '') + ' ' + String(msg.payload || '');\n    msg.statusCode = 502;\n    msg.payload = JSON.stringify({code: 'NODE_RED_PROXY', error: '[NODE_RED_PROXY] Sin respuesta de Python simulado (127.0.0.1:8001). La orden no se confirmo.', detail: detail.trim()});\n}\nreturn msg;",
+    "outputs": 1,
+    "x": 690,
+    "y": 200,
+    "wires": [
+      [
+        "response"
+      ]
+    ]
+  },
+  {
+    "id": "response",
+    "type": "http response",
+    "z": "sim",
+    "name": "Respuesta a GUI",
+    "statusCode": "",
+    "headers": {
+      "content-type": "application/json",
+      "cache-control": "no-store"
+    },
+    "x": 910,
+    "y": 120,
+    "wires": []
+  }
+]

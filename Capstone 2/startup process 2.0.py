@@ -32,7 +32,7 @@ RELAYS = {
     "Diffusion Pump B": cfg.DIFFUSION_PUMP_B_RELAY,
     "Gate Valve A": cfg.GATE_VALVE_A_RELAY,
     "Gate Valve B": cfg.GATE_VALVE_B_RELAY,
-    "Microwave Cooling": cfg.MICROWAVE_COOLING_RELAY,
+    "Buzzer": cfg.BUZZER_RELAY,
 }
 
 
@@ -356,7 +356,7 @@ def run_sequence() -> None:
 
     show_step("10", "Gas y sistema de microondas", "estado operacional")
     pause_for_operator("Inyecte el gas de proceso y regule la presión.")
-    set_relay("Microwave Cooling", True)
+    # Buzzer reservado para alarma; no activarlo como parte del arranque.
     pause_for_operator(
         f"Encienda Power Supply y ajuste aproximadamente {cfg.POWER_SUPPLY_CURRENT_AMPS:.0f} A."
     )
