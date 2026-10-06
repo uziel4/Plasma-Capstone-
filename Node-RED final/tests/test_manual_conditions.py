@@ -15,11 +15,11 @@ class ManualConditionsTests(unittest.TestCase):
         return {'timestamp':time.time()-age, 'vacuum':{'Medium Vacuum':{'torr':pressure,'error':error}}}
 
     def test_relay_addresses_match_unique_outputs(self):
-        self.assertEqual(RELAY_ADDRESSES, (1, 2))
-        self.assertEqual(set(RELAYS.values()), {(a,r) for a in (1,2) for r in range(1,9)})
-        self.assertEqual(RELAYS['Air Compressor'], (1,1))
-        self.assertEqual(RELAYS['Chamber Valve B'], (2,1))
-        self.assertEqual(RELAYS['Buzzer'], (2,8))
+        self.assertEqual(RELAY_ADDRESSES, (0, 1))
+        self.assertEqual(set(RELAYS.values()), {(a,r) for a in (0,1) for r in range(1,9)})
+        self.assertEqual(RELAYS['Air Compressor'], (0,1))
+        self.assertEqual(RELAYS['Chamber Valve B'], (1,1))
+        self.assertEqual(RELAYS['Buzzer'], (1,8))
 
     def test_temporary_manual_permissions(self):
         self.assertEqual(INITIAL_MANUAL_ALLOWED,

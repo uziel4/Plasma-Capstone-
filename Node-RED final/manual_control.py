@@ -4,20 +4,20 @@ import time
 from hardware_bus import SPI_LOCK
 from errores import ControlError
 
-RELAY_ADDRESSES = (1, 2)
+RELAY_ADDRESSES = (0, 1)  # RELAYplate2 #1 = address 0, #2 = address 1
 THERMO_ADDRESS = 2
 ADC_ADDRESS = 3
 # Nombre mostrado en el GUI: (address, rele). None = pendiente de cableado.
 RELAYS = {
-    'Air Compressor': (1, 1),
-    'Water Chiller': (1, 2),
-    'Booster Pump': (1, 3), 'Cool Trap A': (1, 4), 'Cool Trap B': (1, 5),
-    'Chamber Valve A': (1, 8), 'Chamber Valve B': (2, 1),
-    'Mechanical Pump A': (2, 2), 'Mechanical Pump B': (2, 3),
-    'Diffusion Pump A': (2, 4), 'Diffusion Pump B': (2, 5),
-    'Gate Valve A': (2, 6), 'Gate Valve B': (2, 7),
-    'Diffuse Valve A': (1, 6), 'Diffuse Valve B': (1, 7),
-    'Buzzer': (2, 8),
+    'Air Compressor': (0, 1),
+    'Water Chiller': (0, 2),
+    'Booster Pump': (0, 3), 'Cool Trap A': (0, 4), 'Cool Trap B': (0, 5),
+    'Chamber Valve A': (0, 8), 'Chamber Valve B': (1, 1),
+    'Mechanical Pump A': (1, 2), 'Mechanical Pump B': (1, 3),
+    'Diffusion Pump A': (1, 4), 'Diffusion Pump B': (1, 5),
+    'Gate Valve A': (1, 6), 'Gate Valve B': (1, 7),
+    'Diffuse Valve A': (0, 6), 'Diffuse Valve B': (0, 7),
+    'Buzzer': (1, 8),
 }
 
 

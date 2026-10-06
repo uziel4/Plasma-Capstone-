@@ -8,7 +8,7 @@ from temperaturas import TERMOCUPLAS, ROOM_SENSOR
 class Planta:
     def __init__(self):
         self.lock = RLock()
-        self.masks = {1: 0, 2: 0}
+        self.masks = {0: 0, 1: 0}
         self.updated = time.monotonic()
         self.pressure = 760.0
         self.temps = {name: 24.0 for name in TERMOCUPLAS}
