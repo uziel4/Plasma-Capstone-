@@ -5,14 +5,17 @@
     cells.forEach(cell => { cell.textContent = 'Sin lectura'; cell.title = message; cell.closest('.metric').classList.remove('room-alarm'); });
     status.textContent = message;
   }
+  // Vencida si la marca de tiempo de main.py deja de avanzar; no se compara con el reloj de
+  // este navegador (por SSH desde otra PC el reloj del Pi puede no coincidir).
+  let lastStamp = null, lastChange = 0;
   async function update() {
     try {
       const response = await fetch('/api/temperatures', {signal: AbortSignal.timeout(10000)});
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
-      if (!data.temperatures || !Number.isFinite(data.timestamp) || Math.abs(Date.now()/1000-data.timestamp)>15) {
-        throw new Error('Respuesta incompleta o lectura vencida');
-      }
+      if (!data.temperatures || !Number.isFinite(data.timestamp)) throw new Error('Respuesta incompleta');
+      if (data.timestamp !== lastStamp) { lastStamp = data.timestamp; lastChange = Date.now(); }
+      if (Date.now() - lastChange > 15000) throw new Error('Lectura vencida: main.py no actualiza');
       const errors = [];
       for (const cell of cells) {
         const entry = data.temperatures[cell.dataset.temperature];

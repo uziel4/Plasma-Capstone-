@@ -2,14 +2,17 @@
   const cells = [...document.querySelectorAll('[data-pressure]')];
   const status = document.querySelector('#pressure-status');
   const water = document.querySelector('#water-temperature-current');
+  // Vencida si la marca de tiempo de main.py deja de avanzar; no se compara con el reloj de
+  // este navegador (por SSH desde otra PC el reloj del Pi puede no coincidir).
+  let lastStamp = null, lastChange = 0;
   async function update() {
     try {
       const response = await fetch('/api/pressures', {signal: AbortSignal.timeout(10000)});
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
-      if (!data.pressures || !Number.isFinite(data.timestamp) || Math.abs(Date.now()/1000-data.timestamp)>15) {
-        throw new Error('Respuesta incompleta o vencida');
-      }
+      if (!data.pressures || !Number.isFinite(data.timestamp)) throw new Error('Respuesta incompleta');
+      if (data.timestamp !== lastStamp) { lastStamp = data.timestamp; lastChange = Date.now(); }
+      if (Date.now() - lastChange > 15000) throw new Error('Lectura vencida: main.py no actualiza');
       window.dispatchEvent(new CustomEvent('adc-readings', {detail: data}));
       const details = [];
       for (const cell of cells) {

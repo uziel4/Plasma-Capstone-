@@ -40,12 +40,19 @@
     el.title = detail;
     el.setAttribute('aria-label', `${key.replaceAll('_',' ')}: ${value} ${unit}. ${detail}`);
   }
+  // Vencida si la marca de tiempo de main.py deja de avanzar; no se compara con el reloj de
+  // este navegador (por SSH desde otra PC el reloj del Pi puede no coincidir).
+  const stamps = {};
   async function poll(group, url, render, clear) {
     try {
       const response = await fetch(url,{signal:AbortSignal.timeout(10000)});
       const data = await response.json();
       if (!response.ok) throw Error(data.error || `HTTP ${response.status}`);
-      if (url !== '/api/relays' && (!Number.isFinite(data.timestamp) || Math.abs(Date.now()/1000-data.timestamp)>15)) throw Error('Lectura vencida o sin fecha');
+      if (url !== '/api/relays') {
+        if (!Number.isFinite(data.timestamp)) throw Error('Lectura sin fecha');
+        if (stamps[url]?.value !== data.timestamp) stamps[url] = {value: data.timestamp, at: Date.now()};
+        if (Date.now() - stamps[url].at > 15000) throw Error('Lectura vencida: main.py no actualiza');
+      }
       report(group, render(data));
     } catch (error) {
       clear(); report(group,[`[DASH_CONNECTION] ${error.message}. Revise main.py, la URL y logs/control.log.`]);

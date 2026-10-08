@@ -50,11 +50,20 @@ Con sesión gráfica, a los 8 segundos se abre el Vacuum Controller en el navega
 | Editor Node-RED (vacuum) | http://127.0.0.1:1880/red |
 | Editor Node-RED (dashboard) | http://127.0.0.1:1881/red |
 
-Todo escucha solo en `127.0.0.1`. Desde la Mac, con un túnel SSH:
+Todo escucha solo en `127.0.0.1`. Desde otra PC (por ejemplo Windows conectada por Ethernet directo al Pi), con un túnel SSH:
 
 ```bash
-ssh -N -L 1880:127.0.0.1:1880 -L 1881:127.0.0.1:1881 uziel4@192.168.0.222
+ssh -N -L 1880:127.0.0.1:1880 -L 1881:127.0.0.1:1881 -L 8000:127.0.0.1:8000 plasma@169.254.46.9
 ```
+
+Y abrir `http://localhost:1880/dashboard/main` y `http://localhost:1881/dashboard/main` en esa PC.
+
+### Acceso remoto: por qué antes no llegaban las mediciones
+
+- Las pantallas piden todo con rutas relativas (`/api/...`) al Node-RED que las sirve, y ese Node-RED lo reenvía a `main.py` (127.0.0.1:8000) dentro del Pi. No hay IPs ni hosts fijos en el navegador, no hay CORS y ambas instancias usan el mismo `main.py`: funciona igual en el Pi, por Ethernet o por túnel.
+- **Causa del fallo:** `presiones.js`, `temperaturas.js` y `dashboard.js` descartaban una lectura si su `timestamp` (reloj del Pi) difería más de 15 s del reloj **del navegador**. El Pi no tiene reloj con batería; sin internet (Ethernet directo, 169.254.x.x) no sincroniza la hora. En el monitor del Pi ambos relojes son el mismo y todo funcionaba; desde otra PC la diferencia superaba 15 s y salía «Sin lectura». Los relés no usaban esa comprobación, por eso sí funcionaban.
+- **Corrección:** una lectura se considera vencida solo si el `timestamp` de `main.py` deja de avanzar durante 15 s, medido con el reloj del propio navegador. Ya no se comparan relojes de dos equipos. No cambian conversiones, canales, relés, interlocks ni secuencias.
+- Comprobación rápida en Windows (PowerShell, con el túnel abierto): `curl.exe -s http://localhost:1880/api/pressures` debe devolver JSON con `psi`, y en la página no debe aparecer «Sin lectura».
 
 ## Editar las pantallas
 
