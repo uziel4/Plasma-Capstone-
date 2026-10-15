@@ -3,6 +3,7 @@ import logging
 import math
 import threading
 import time
+from errores import ControlError
 from temperaturas import ROOM_SENSOR
 
 ROOM_ALARM_C = 29.0  # El laboratorio ronda 21-22 °C; la alarma se activa con Room > 29 °C
@@ -13,20 +14,42 @@ CHECK_SECONDS = 2
 class RoomAlarm:
     """Enciende el Buzzer cuando Room > 29 °C y lo apaga al bajar a <= 28 °C,
     solo si lo encendio la alarma. Entre 28 y 29 °C conserva el estado. Un OFF manual del Buzzer lo silencia. Con el
-    paro activo no se acciona el Buzzer; el aviso sigue visible en ambos GUI."""
+    paro activo no se acciona el Buzzer; el aviso sigue visible en ambos GUI.
+    "Apagar alarma" (silence) apaga el Buzzer y cierra la tarjeta de ambos GUI hasta que la alarma se normalice;
+    un nuevo episodio (Room > 29 °C despues de bajar a <= 28 °C) vuelve a sonar."""
 
     def __init__(self, control, temperatures, emergency):
         self.control, self.temperatures, self.emergency = control, temperatures, emergency
         self.lock = threading.Lock()
         self.active = False
+        self.silenced = False
         self.buzzer_by_alarm = False
         self.celsius = None
         self.error = None
 
     def state(self):
         with self.lock:
-            return {'name': 'High room temperature', 'active': self.active, 'celsius': self.celsius,
-                    'limit_c': ROOM_ALARM_C, 'clear_c': ROOM_CLEAR_C, 'buzzer': self.buzzer_by_alarm, 'error': self.error}
+            return {'name': 'High room temperature', 'active': self.active, 'silenced': self.silenced,
+                    'celsius': self.celsius, 'limit_c': ROOM_ALARM_C, 'clear_c': ROOM_CLEAR_C,
+                    'buzzer': self.buzzer_by_alarm, 'error': self.error}
+
+    def silence(self):
+        """Apagar alarma desde un GUI: Buzzer OFF y sin volver a sonar en este episodio."""
+        with self.lock:
+            if self.active and not self.silenced:
+                if self.buzzer_by_alarm:
+                    try:
+                        self._buzzer(False)
+                    except ControlError as exc:
+                        # Con el paro activo los reles ya estan en OFF; otro fallo deja la alarma sonando.
+                        if exc.code != 'STOP_LATCHED':
+                            self.error = f'Buzzer no apagado: {exc}'
+                            raise
+                    self.buzzer_by_alarm = False
+                self.silenced = True
+                logging.warning('Alarma High room temperature apagada por el operador: Room %s °C',
+                                f'{self.celsius:.2f}' if self.celsius is not None else 'sin lectura')
+        return self.state()
 
     def _buzzer(self, on):
         self.emergency.command(lambda: self.control.set_relay('Buzzer', on))
@@ -44,12 +67,14 @@ class RoomAlarm:
             high = value > ROOM_ALARM_C or (self.active and value > ROOM_CLEAR_C)
             if high and not self.active:
                 logging.warning('ALARMA High room temperature: Room %.2f °C > %.0f °C', value, ROOM_ALARM_C)
+                self.silenced = False
             elif not high and self.active:
                 logging.info('Alarma High room temperature normalizada: Room %.2f °C', value)
+                self.silenced = False
             self.active = high
             self.error = None
             try:
-                if high and not self.buzzer_by_alarm:
+                if high and not self.silenced and not self.buzzer_by_alarm:
                     self._buzzer(True)
                     self.buzzer_by_alarm = True
                 elif not high and self.buzzer_by_alarm:

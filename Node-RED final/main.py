@@ -77,7 +77,7 @@ def handler_for(control, temperatures, pressures, mass=None, emergency=None, ala
                 except Exception as exc:
                     self.failure(503, exc)
                 return
-            files = {'/startup.js': 'startup.js', '/screen_fit.js': 'screen_fit.js', '/emergency.js': 'emergency.js', '/masscontroll.js': 'masscontroll.js', '/': 'vacuum_controller.html', '/vacuum_controller.html': 'vacuum_controller.html',
+            files = {'/startup.js': 'startup.js', '/screen_fit.js': 'screen_fit.js', '/emergency.js': 'emergency.js', '/room_alarm_card.js': 'room_alarm_card.js','/masscontroll.js': 'masscontroll.js', '/': 'vacuum_controller.html', '/vacuum_controller.html': 'vacuum_controller.html',
                      '/dashboard.html': 'dashboard.html', '/dashboard.js': 'dashboard.js', '/temperaturas.js': 'temperaturas.js', '/presiones.js': 'presiones.js', '/vacio.js': 'vacio.js', '/manual_control.js': 'manual_control.js'}
             if self.path not in files:
                 self.failure(404, ControlError('HTTP_ROUTE', 'Ruta no encontrada', self.path))
@@ -91,7 +91,7 @@ def handler_for(control, temperatures, pressures, mass=None, emergency=None, ala
             self.reply(200, body, content_type)
 
         def do_POST(self):
-            if self.path not in ('/api/relays', '/api/mass-flow', '/api/emergency', '/api/startup', '/api/startup/confirm-gas', '/api/shutdown', '/api/shutdown/confirm-gas'):
+            if self.path not in ('/api/relays', '/api/mass-flow', '/api/emergency', '/api/startup', '/api/startup/confirm-gas', '/api/shutdown', '/api/shutdown/confirm-gas', '/api/room-alarm/silence'):
                 self.failure(404, ControlError('HTTP_ROUTE', 'Ruta no encontrada', self.path))
                 return
             # Solo peticiones JSON del GUI del mismo origen.
@@ -110,6 +110,11 @@ def handler_for(control, temperatures, pressures, mass=None, emergency=None, ala
                     if data != {}:
                         raise ValueError('Se requiere objeto vacio')
                     result = emergency.stop('Boton de emergencia')
+                elif self.path == '/api/room-alarm/silence':
+                    if data != {}:
+                        raise ValueError('Se requiere objeto vacio')
+                    # Siempre permitido: solo apaga el Buzzer de la alarma, aun durante startup o shutdown.
+                    result = alarm.silence()
                 elif self.path in ('/api/shutdown', '/api/shutdown/confirm-gas'):
                     if data != {}:
                         raise ValueError('Se requiere objeto vacio')

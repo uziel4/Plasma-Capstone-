@@ -92,6 +92,74 @@ class RoomAlarmTests(unittest.TestCase):
         self.assertTrue(alarm.state()['active'])
         self.assertIn('Buzzer no accionado', alarm.state()['error'])
 
+    def test_silence_stops_buzzer_until_next_episode(self):
+        ok = lambda c: {'celsius': c, 'error': None, 'channel': 9}
+        alarm, control = self.alarm([ok(30), ok(31), ok(28.5), ok(28.0), ok(29.5)])
+        alarm.check()
+        control.set_relay.assert_called_once_with('Buzzer', True)
+        state = alarm.silence()
+        control.set_relay.assert_called_with('Buzzer', False)
+        self.assertEqual((state['active'], state['silenced'], state['buzzer']), (True, True, False))
+        alarm.check(); alarm.check()  # 31 y 28.5 °C: sigue activa, apagada; no vuelve a sonar
+        self.assertEqual(control.set_relay.call_count, 2)
+        self.assertTrue(alarm.state()['silenced'])
+        alarm.check()  # 28.0 °C: se normaliza sin otra orden (el Buzzer ya esta OFF)
+        self.assertEqual(control.set_relay.call_count, 2)
+        self.assertEqual((alarm.state()['active'], alarm.state()['silenced']), (False, False))
+        alarm.check()  # 29.5 °C: episodio nuevo, vuelve a sonar
+        control.set_relay.assert_called_with('Buzzer', True)
+        self.assertEqual((alarm.state()['active'], alarm.state()['silenced']), (True, False))
+
+    def test_silence_without_alarm_does_nothing(self):
+        alarm, control = self.alarm([{'celsius': 22, 'error': None}])
+        alarm.check()
+        self.assertFalse(alarm.silence()['silenced'])
+        control.set_relay.assert_not_called()
+
+    def test_silence_with_emergency_active(self):
+        alarm, control = self.alarm([{'celsius': 30, 'error': None}])
+        alarm.check()
+        alarm.emergency.active = True  # El paro ya dejo los reles en OFF
+        state = alarm.silence()
+        self.assertEqual((state['silenced'], state['buzzer']), (True, False))
+        control.set_relay.assert_called_once_with('Buzzer', True)
+
+    def test_silence_failure_keeps_alarm_ringing(self):
+        alarm, control = self.alarm([{'celsius': 30, 'error': None}])
+        alarm.check()
+        control.set_relay.side_effect = ControlError('HW_WRITE', 'Error al enviar la orden')
+        with self.assertRaises(ControlError):
+            alarm.silence()
+        self.assertEqual((alarm.state()['silenced'], alarm.state()['buzzer']), (False, True))
+
+    def test_silence_route(self):
+        import http.client
+        import json
+        import threading
+        from http.server import ThreadingHTTPServer
+        from main import handler_for
+        alarm, control = self.alarm([{'celsius': 30, 'error': None}])
+        alarm.check()
+        server = ThreadingHTTPServer(('127.0.0.1', 0), handler_for(control, Mock(), Mock(), Mock(), alarm.emergency, alarm))
+        worker = threading.Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+
+        def post(body):
+            client = http.client.HTTPConnection(*server.server_address)
+            client.request('POST', '/api/room-alarm/silence', body=json.dumps(body), headers={'Content-Type': 'application/json'})
+            response = client.getresponse()
+            result = (response.status, json.loads(response.read()))
+            client.close()
+            return result
+        try:
+            self.assertEqual(post({'x': 1})[0], 400)
+            status, state = post({})
+            self.assertEqual(status, 200)
+            self.assertEqual((state['active'], state['silenced']), (True, True))
+            control.set_relay.assert_called_with('Buzzer', False)
+        finally:
+            server.shutdown(); server.server_close(); worker.join()
+
 
 if __name__ == '__main__':
     unittest.main()

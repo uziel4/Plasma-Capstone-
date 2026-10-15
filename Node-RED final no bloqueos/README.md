@@ -91,7 +91,7 @@ Las mismas reglas que `producto final`:
   - Booster Pump siempre habilitado. Buzzer temporal. Apagar (OFF) siempre está permitido.
 - Startup y shutdown automáticos, Emergency Shutdown en ambas pantallas.
 - Temperaturas (7 termocuplas K), Water RTD, presiones, Medium y High Vacuum.
-- Room (lab temp): DS18B20 en THERMOplate address 2, puerto 9. La alarma **High room temperature** se activa con Room > 29 °C, enciende el Buzzer y se desactiva con ≤ 28 °C.
+- Room (lab temp): DS18B20 en THERMOplate address 2, puerto 9. La alarma **High room temperature** se activa con Room > 29 °C, enciende el Buzzer y se desactiva con ≤ 28 °C. Mientras está activa, ambas pantallas muestran una tarjeta en el centro con **Apagar alarma**: apaga el Buzzer (POST `/api/room-alarm/silence`) y cierra la tarjeta en las dos pantallas; no vuelve a sonar hasta un nuevo episodio (Room ≤ 28 °C y después > 29 °C).
 - Roughing Vacuum Gauges A/B en ADCplate 3, S4 y S5: barras de 0-10 V en Vacuum Levels (0 V = 10⁻³ Torr, 10 V = 1000 Torr). La lectura reservada del caudal del Aera pasó a S6.
 - Secciones de grupos futuros (mass flow y AutoVacío) visibles pero deshabilitadas.
 

@@ -4,33 +4,13 @@
   const states = [...document.querySelectorAll('.state')];
   states.forEach(el => { el.dataset.equipment = el.getAttribute('aria-label'); });
   const diagnostics = {};
-  const coilPrevious = {};
-  function coilTrend(name, value, timestamp) {
-    const equipment = name === 'Field Magnet A' ? 'Field Coil A' : 'Field Coil B';
-    const el = states.find(item => item.dataset.equipment === equipment);
-    if (!el) return;
-    const previous = coilPrevious[name];
-    if (Number.isFinite(value) && previous && timestamp === previous.timestamp) return;
-    const valid = Number.isFinite(value) && Number.isFinite(timestamp);
-    // Compare the same 0.1 °C resolution displayed on the dashboard.
-    const current = valid ? Math.round(value * 10) : null;
-    const comparable = valid && previous && timestamp > previous.timestamp && timestamp - previous.timestamp <= 15;
-    const rising = comparable && current > previous.value;
-    const label = !valid ? 'Sin lectura' : !comparable ? 'Esperando segunda lectura' : rising ? 'Temperatura subiendo' : 'Temperatura estable o bajando';
-    el.classList.toggle('unknown', !comparable);
-    el.classList.toggle('on', Boolean(rising));
-    el.title = `${equipment}: ${label}. Tendencia termica; no confirma alimentacion electrica.`;
-    el.setAttribute('aria-label', el.title);
-    if (valid) coilPrevious[name] = {value: current, timestamp};
-    else delete coilPrevious[name];
-  }
   function report(group, errors) {
     diagnostics[group] = errors;
     const all = Object.entries(diagnostics).flatMap(([key, messages]) => messages.map(m => `${key}: ${m}`));
     const alarm = all.find(m => m.includes('ALARMA High room temperature'));
     document.querySelector('#status').textContent = alarm ? 'ALARMA: HIGH ROOM TEMPERATURE' : all.length ? 'Atencion: lecturas o estados pendientes' : 'Monitor conectado';
     document.querySelector('#condition').textContent = Object.entries(diagnostics).map(([k,v]) => `${k}: ${v.length ? 'revisar diagnosticos' : 'conectado'}`).join(' | ');
-    document.querySelector('#result').textContent = all.length ? all.join('\n') : 'Sin errores de comunicacion. Field Coil A/B indican tendencia de temperatura.';
+    document.querySelector('#result').textContent = all.length ? all.join('\n') : 'Sin errores de comunicacion.';
   }
   function reading(key, value, unit, detail='', warning=false) {
     const el = document.querySelector(`[data-reading="${key}"]`);
@@ -59,20 +39,18 @@
     } finally { setTimeout(() => poll(group,url,render,clear),1500); }
   }
   function clearRelays() {
-    states.filter(el => !el.dataset.equipment.startsWith('Field Coil')).forEach(el => {el.classList.remove('on');el.classList.add('unknown');el.title='Estado no confirmado';el.setAttribute('aria-label',`${el.dataset.equipment}: desconocido`);});
+    states.forEach(el => {el.classList.remove('on');el.classList.add('unknown');el.title='Estado no confirmado';el.setAttribute('aria-label',`${el.dataset.equipment}: desconocido`);});
   }
   poll('Reles','/api/relays',data => {
     if (!data.relays) throw Error('Respuesta de reles invalida');
     const errors=[];
     states.forEach(el => {
       const name=el.dataset.equipment, state=data.relays[name];
-      if (name.startsWith('Field Coil')) return;
-      const assigned = !name.startsWith('Field Coil');
-      const known = assigned && state?.configured && typeof state.on==='boolean';
+      const known = state?.configured && typeof state.on==='boolean';
       el.classList.toggle('unknown',!known);el.classList.toggle('on',known && state.on);
-      const label=known ? (state.on?'ON':'OFF') : assigned?'desconocido':'control no asignado';
+      const label=known ? (state.on?'ON':'OFF') : 'desconocido';
       el.title=`${name}: ${label}`;el.setAttribute('aria-label',el.title);
-      if(assigned && !known) errors.push(`${name}: estado no confirmado`);
+      if(!known) errors.push(`${name}: estado no confirmado`);
     });
     return errors;
   },clearRelays);
@@ -83,7 +61,6 @@
       const valid=entry && !entry.error && Number.isFinite(entry.celsius);
       const detail=entry?.error?.error || (valid?`THERMOplate 2, canal ${entry.channel}`:'Sin lectura');
       reading(key,valid?entry.celsius.toFixed(1):'—','°C',detail);
-      if (name.startsWith('Field Magnet')) coilTrend(name, valid ? entry.celsius : null, data.timestamp);
       if(!valid) errors.push(`${name}: ${detail}`);
     }
     const alarm=data.room_alarm, room=data.temperatures?.Room;
@@ -92,7 +69,6 @@
     return errors;
   },() => {
     Object.keys(thermal).forEach(k=>reading(k,'—','°C','Sin conexion'));
-    ['Field Magnet A','Field Magnet B'].forEach(name => coilTrend(name,null,null));
   });
   poll('ADC','/api/pressures',data => {
     const errors=[];

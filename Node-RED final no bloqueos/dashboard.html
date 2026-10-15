@@ -35,7 +35,6 @@
     .readout .unit { flex: none; color: #586674; font-size: 12px; font-weight: 600; }
     .readout.coil-readout { width: 106px; }
     .state { position: absolute; padding: 0; border: 3px solid #f20d13; border-radius: 10px; background: transparent; pointer-events: none; }
-    .state.coil-state { border-radius: 14px; }
     .state.on { border-color: #17a65b; }
     .caption { font-size: 17px; font-weight: bold; fill: #1d2630; text-anchor: middle; }
     .caption.light { fill: white; paint-order: stroke; stroke: #555; stroke-width: 2px; stroke-linejoin: round; }
@@ -52,6 +51,33 @@
       main { overflow-x: auto; justify-content: flex-start; }
       .progress, .help { width: calc(100% - 16px); }
     }
+      /* Tarjeta centrada de la alarma High room temperature (room_alarm_card.js). */
+    .room-alarm-overlay { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 16px; background: rgba(12, 14, 20, .62); }
+    .room-alarm-overlay[hidden] { display: none; }
+    .room-alarm-card { width: min(380px, 100%); background: #fff; color: #1f2633; border-radius: 12px; overflow: hidden; box-shadow: 0 18px 50px rgba(0, 0, 0, .45); font-family: "Avenir Next", "Segoe UI", -apple-system, BlinkMacSystemFont, Arial, sans-serif; text-align: left; animation: room-alarm-pop .22s ease-out; }
+    @keyframes room-alarm-pop { from { transform: scale(.94); opacity: .4; } to { transform: none; opacity: 1; } }
+    .room-alarm-top { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #d9534f; color: #fff; }
+    .room-alarm-top svg { display: block; flex: none; width: 22px; height: 22px; }
+    .room-alarm-top b { font-size: 13px; font-weight: 800; letter-spacing: .06em; }
+    .room-alarm-mid { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+    .room-alarm-big { font-family: "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; font-size: 40px; font-weight: 700; line-height: 1; color: #b4232a; font-variant-numeric: tabular-nums; }
+    .room-alarm-big small { margin-left: 6px; font-family: "Avenir Next", "Segoe UI", -apple-system, Arial, sans-serif; font-size: 14px; font-weight: 500; color: #5b6675; }
+    .room-alarm-card p { margin: 0; font-size: 14px; color: #1f2633; }
+    .room-alarm-buzz { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 999px; background: #fdecec; color: #b4232a; font-size: 13px; font-weight: 700; }
+    .room-alarm-waves i { display: inline-block; width: 3px; height: 10px; margin-right: 2px; border-radius: 2px; background: currentColor; animation: room-alarm-wave .8s ease-in-out infinite; }
+    .room-alarm-waves i:nth-child(2) { animation-delay: .15s; }
+    .room-alarm-waves i:nth-child(3) { animation-delay: .3s; }
+    .room-alarm-quiet { background: #eef1f5; color: #5b6675; }
+    .room-alarm-quiet .room-alarm-waves i { animation: none; }
+    @keyframes room-alarm-wave { 0%, 100% { transform: scaleY(.4); } 50% { transform: scaleY(1.2); } }
+    .room-alarm-actions { display: flex; flex-direction: column; gap: 8px; padding: 0 16px 16px; }
+    .room-alarm-button { padding: 12px; border: 0; border-radius: 8px; background: #b4232a; color: #fff; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
+    .room-alarm-button:hover { background: #961c22; }
+    .room-alarm-button:focus-visible { outline: 3px solid #7fb2ff; outline-offset: 2px; }
+    .room-alarm-button:disabled { opacity: .7; cursor: wait; }
+    .room-alarm-note { font-size: 12px; color: #5b6675; }
+    .room-alarm-card .room-alarm-error { font-size: 12px; color: #b4232a; font-weight: 700; }
+    @media (prefers-reduced-motion: reduce) { .room-alarm-card, .room-alarm-waves i { animation: none; } }
   </style>
 </head>
 <body>
@@ -113,8 +139,6 @@
     <div class="state unknown" style="left:69px;top:70px;width:104px;height:97px" aria-label="Water Chiller"></div>
     <div class="state unknown" style="left:232px;top:70px;width:104px;height:97px" aria-label="Booster Pump"></div>
     <div class="state unknown" style="left:1419px;top:70px;width:103px;height:97px" aria-label="Air Compressor"></div>
-    <div class="state coil-state unknown" style="left:619px;top:238px;width:29px;height:281px" aria-label="Field Coil A"></div>
-    <div class="state coil-state unknown" style="left:924px;top:238px;width:29px;height:281px" aria-label="Field Coil B"></div>
     <div class="state unknown" style="left:312px;top:474px;width:83px;height:47px" aria-label="Gate Valve A"></div>
     <div class="state unknown" style="left:439px;top:494px;width:76px;height:52px" aria-label="Chamber Valve A"></div>
     <div class="state unknown" style="left:1180px;top:474px;width:83px;height:47px" aria-label="Gate Valve B"></div>
@@ -128,7 +152,7 @@
     <div class="state unknown" style="left:619px;top:754px;width:120px;height:75px" aria-label="Mechanical Pump A"></div>
     <div class="state unknown" style="left:842px;top:754px;width:120px;height:75px" aria-label="Mechanical Pump B"></div>
   </div></main>
-  <p class="help">Monitor de hardware · Presiones en bar, vacío en mbar y temperaturas en °C. Verde: rele energizado; rojo: desenergizado; gris discontinuo: estado desconocido o sin asignacion. Water Temp usa un transmisor de 4-20 mA para 0-100 °C. Field Coil A/B: verde cuando la temperatura sube; rojo cuando esta estable o baja; gris mientras falta comparar lecturas. Indica tendencia termica, no alimentacion electrica.</p>
+  <p class="help">Monitor de hardware · Presiones en bar, vacío en mbar y temperaturas en °C. Verde: rele energizado; rojo: desenergizado; gris discontinuo: estado desconocido o sin asignacion. Water Temp usa un transmisor de 4-20 mA para 0-100 °C.</p>
   <script>
     const diagram = document.querySelector('#diagram');
     function resize() {
@@ -150,6 +174,26 @@
 
   </script>
   <script src="dashboard.js" defer></script>
+  <!-- Alarma High room temperature: tarjeta centrada (room_alarm_card.js). -->
+  <div class="room-alarm-overlay" id="room-alarm-overlay" role="alertdialog" aria-modal="true" aria-labelledby="room-alarm-title" hidden>
+    <div class="room-alarm-card">
+      <div class="room-alarm-top">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"></path><path d="M12 10v4"></path><path d="M12 17.5v.01"></path></svg>
+        <b id="room-alarm-title">ALARMA · HIGH ROOM TEMPERATURE</b>
+      </div>
+      <div class="room-alarm-mid">
+        <div class="room-alarm-big"><span id="room-alarm-temp">—</span> °C<small>Room (lab)</small></div>
+        <p>La temperatura del laboratorio pasó de <b><span id="room-alarm-limit">29</span> °C</b>.</p>
+        <span class="room-alarm-buzz" id="room-alarm-buzz"><span class="room-alarm-waves" aria-hidden="true"><i></i><i></i><i></i></span><span id="room-alarm-buzz-text">Buzzer sonando</span></span>
+      </div>
+      <div class="room-alarm-actions">
+        <button type="button" class="room-alarm-button" id="room-alarm-silence">Apagar alarma</button>
+        <span class="room-alarm-note">Apaga el Buzzer en las dos pantallas. La alarma se borra sola cuando Room baje a <span id="room-alarm-clear">28</span> °C o menos.</span>
+        <p class="room-alarm-error" id="room-alarm-error" role="status" hidden></p>
+      </div>
+    </div>
+  </div>
+  <script src="room_alarm_card.js" defer></script>
   <script src="emergency.js" defer></script>
 </body>
 </html>
